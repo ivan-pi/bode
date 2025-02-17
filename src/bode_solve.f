@@ -45,7 +45,7 @@ C    EMAX  - RELATIVE ACCURACY REQUIRED PER TIME STEP
 C    XSTEP - THE SIZE OF THE FIRST INITIAL TIME STEP. IF THIS IS SET
 C           ZERO THE INITIAL STEP IS SET TO ABS(XOUT-XIN)*0.25
 C    MONIT - A USER SUPPLIED ROUTINE OF THE FORM
-C           
+C
 C           SUBROUTINE MONIT(Y,N,X)
 C           DIMENSION Y(N)
 C
@@ -71,7 +71,8 @@ C***********************************************************************
 
 
       SUBROUTINE BODE(XIN,XOUT,N,YN,YMIN,EMAX,XSTEP,MONIT,IMN,M1,IFAIL)
-      use bode_mod, only: wp, ld
+      use bode_mod, only: wp, ld, tsol
+      implicit none
       real(wp), intent(in) :: xin
       real(wp), intent(inout) :: xout
       integer, intent(in) :: n
@@ -83,6 +84,27 @@ C***********************************************************************
       integer, intent(in) :: imn, m1
       integer, intent(out) :: ifail
 
+      interface
+      SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,
+     *EMAX,H,IFAIL)
+        import wp
+         implicit none
+         integer, intent(in) :: n, ld, m, m1, m2
+         real(wp), intent(inout) :: x1(n)
+         real(wp), intent(in) :: del(n)
+         integer, intent(inout) :: ijac
+         real(wp), intent(inout) :: hjac(n)
+         real(wp), intent(in) :: x, h   ! scalars passed to routine deriv
+
+         ! storage for the factorized Jacobian
+         real(wp), intent(inout) :: a(ld,m), tl(ld,m2)
+         integer, intent(inout) :: ipiv(n)
+
+         real(wp), intent(in) :: emax
+         integer, intent(inout) :: ifail
+      end subroutine
+      end interface
+
 C
 C LOCAL VARIABLES
 C
@@ -90,19 +112,26 @@ C
       real(wp) :: del(ld), fn(ld), yn1(ld), yold(ld), pyp(ld), fn2(ld)
       real(wp) :: v1(ld), pyc(ld), hjac(ld)
       integer :: ipiv(ld)
+      logical :: laststep, firststep, halve_step
 C
+      real(wp) :: con, del1, h, h1, t, rel, rat, rat1, x
+
+      integer :: i, idoha, ijac, im, imon, mon, m, m2, nhalf
+
 C   TMIN  - SMALLEST TIME STEP SUCH THAT X+TMIN AND X
 C           ARE DIFFERENT WITHIN THE MACHINE
 C
-      real(wp), parameter :: tmin = 1.e-10_wp
+      real(wp), parameter :: tmin = 1.0e-10_wp
+      real(wp), parameter :: B = 1.0_wp/6.0_wp
+      real(wp), parameter :: alpha = 0.55_wp
+      real(wp), parameter :: a = 1.0_wp - alpha
 C***********************************************************************
 C INITIALIZE THE VARIABLES
 C***********************************************************************
       IMON = IMN
       M2 = M1 + 1
       M = 2*M1 + 1
-      ALPHA = 0.55_wp
-      A = 1.0_wp - ALPHA
+      if (m > 20) error stop "Bandwidth exceeds 20."
 C***********************************************************************
 C INITIALIZE THE OTHER REQUIRED VARIABLES
 C***********************************************************************
@@ -110,26 +139,24 @@ C***********************************************************************
       IDOHA = 0
       NHALF = 0
       RAT = 0.0_wp
-      LSTEP = 0
+      firststep = .true.
       IM = 0
-      IFSTEP = 0
       IJAC = 0
-      B = 1.0_wp/6.0_wp
 C***********************************************************************
 C SET UP INITIAL TIME STEP
 C***********************************************************************
-      IF (XSTEP == 0.0_wp) XSTEP=ABS(XOUT-XIN)*0.25_wp
-      H = XSTEP
+      if (xstep == 0.0_wp) xstep = abs(xout - xin)*0.25_wp
+      h = xstep
 C***********************************************************************
-C TEST IF ONLY ONE STEP IS REQUIRED AND IF SO SET LSTEP
+C TEST IF ONLY ONE STEP IS REQUIRED AND IF SO SET LASTSTEP
 C***********************************************************************
-      IF (ABS(XOUT-XIN)/H <= 1.1_wp) LSTEP = 1
-      X = XIN + H
+      laststep = abs(xout - xin)/h <= 1.1_wp
+      x = xin + h
 C***********************************************************************
 C PREPARE REQUIRED ARRAYS FOR FIRST STEP
 C***********************************************************************
-      CALL PMULT(YN,N,YN1)
-   20 CALL DERIV(YN,N,FN,X,H)
+      call pmult(yn,n,yn1)
+      call deriv(yn,n,fn,x,h)
 C***********************************************************************
 C USE INITIAL VALUES AS FIRST PREDICTED VALEUS
 C***********************************************************************
@@ -138,203 +165,217 @@ C***********************************************************************
         hjac(i) = 1.0e-3_wp
         pyp(i) = yn(i)
       end do
-C***********************************************************************
-C SOLUTION OF THE CORRECTOR STEP IN THE FORM OF A SYSTEM OF
-C NONLINEAR EQUATIONS
-C***********************************************************************
-   40 do i =1,n
-        x1(i) = pyp(i)
-        del(i) = yn1(i) + a*fn(i)
-      end do
-      h1 = h*alpha
-      ifail = 0
-      call nonlin(x1,n,del,ijac,hjac,x,arr,tl,ipiv,m,m1,m2,emax,
-     *  h1,ifail)
-      do i = 1, n
-        pyc(i)=x1(i)
-      end do
-C***********************************************************************
-C TEST FOR ERROR 0-
-C    IFAIL=1  - FAILURE IN FUN EVALUATION
-C    IFAIL=2  - NO CONVERGENCE  HALVE STEP SIZE
-C    IFAIL=3  - DIVERGENCE IN N-R ITERATION
-C***********************************************************************
-      IF (IFAIL.NE.0) GO TO 210
+
+      solve: do
+!
+! solution of the corrector step in the form of a system of
+! nonlinear equations
+!
+        attempt_step: block
+          do i =1,n
+            x1(i) = pyp(i) ! y
+            del(i) = yn1(i) + a*fn(i) ! B*y + (1 - gamma)*(h*f(y))
+          end do
+          h1 = h*alpha
+          ifail = 0
+          call nonlin(x1,n,del,ijac,hjac,x,arr,tl,ld,ipiv,m,m1,m2,emax,
+     *      h1,ifail)
+          do i = 1, n
+            pyc(i)=x1(i)
+          end do
+
+          halve_step = IFAIL /= 0
+          if (halve_step) exit attempt_step
+
 C***********************************************************************
 C CALCULATE REQUIRED ARRAYS FROM CORRECTED VALUES
 C***********************************************************************
-      CALL DERIV(PYC,N,FN2,X,H)
+          CALL DERIV(PYC,N,FN2,X,H) ! fn2 := h*f(x,pyc)
 C***********************************************************************
 C CALCULATE VECTORS REQUIRED FOR LOCAL ERROR ESTIMATES
 C***********************************************************************
-      do i = 1, n
-        pyp(i) = fn2(i) - fn(i)
-      end do
-      call tsol(arr,tl,m1,m2,m,n,ipiv,pyp,del)
-      if (ifstep == 0) then
-        ! first step
-        do i = 1, n
-            pyp(i) = 0.0_wp
-        end do
-      else
-C
-C IF FIRST STEP OMIT THESE CALCULATIONS FOR LOCAL ERROR
-C
-          if (rat >= 0.5_wp) then
-            con = rat*(-b + alpha*(1.0_wp - alpha)) / 
-     *                (1.0_wp + 2.0_wp*alpha*(rat - 1.0_wp))
-          else
-            con = b*rat/(1.0_wp + rat)
-          end if
           do i = 1, n
-            pyp(i) = con*(del(i) - v1(i)*rat)
+            pyp(i) = fn2(i) - fn(i)
           end do
-      end if
+          call tsol(arr,tl,ld,m1,m2,m,n,ipiv,pyp,del) ! del :=
+          if (firststep) then
+            ! first step
+            do i = 1, n
+                pyp(i) = 0.0_wp
+            end do
+          else
+              ! CALCULATIONS FOR LOCAL ERROR, omitted if first step
+              if (rat >= 0.5_wp) then
+                con = rat*(-b + alpha*(1 - alpha)) /
+     *                   (1 + 2*alpha*(rat - 1))
+              else
+                con = b*rat/(1 + rat)
+              end if
+              do i = 1, n
+                pyp(i) = con*(del(i) - v1(i)*rat)
+              end do
+          end if
 
 C***********************************************************************
 C CALCULATE MAXIMUM RELATIVE LOCAL TRUNCATION ERROR ESTIMATES
 C***********************************************************************
-      rel = 0.0_wp
-      do i = 1, n
-        del1 = abs(pyp(i) + (alpha - 0.5_wp)*del(i)) / 
-     *         (abs(pyc(i)) + ymin(i))
-        rel = max(rel,del1)
-      end do
-      rel = rel/emax
+          rel = 0.0_wp
+          do i = 1, n
+            del1 = abs(pyp(i) + (alpha - 0.5_wp)*del(i)) /
+     *             (abs(pyc(i)) + ymin(i))
+            rel = max(rel,del1)
+          end do
+          rel = rel/emax
 C***********************************************************************
 C IF REL > 1  HALVE STEP SIZE
 C***********************************************************************
-      IF (REL > 1.0_wp) GO TO 210
+          halve_step = REL > 1.0_wp
+          if (halve_step) exit attempt_step
 C***********************************************************************
 C SUCCESFUL STEP TEST FOR LAST STEP
 C***********************************************************************
-      IF (LSTEP == 1) then
-        ! last step
-        GO TO 300
-      end if
-      RAT = 1.0_wp
-C***********************************************************************
-C DECIDE FROM VALUE OF REL WHETHER STEP SIZE SHOULD REMAIN
-C UNCHANGED OR BE DOUBLED
-C***********************************************************************
-      idoha = 0
-      if (rel <= 0.2_wp) then
-        rat = 2.0_wp
-        idoha = 1
-        ijac = 0
-      end if
-C***********************************************************************
-C TEST IF NEXT STEP WILL BE LAST STEP
-C***********************************************************************
-      if (abs(xout-x)/(h*rat) <= 1.1_wp) then
-        lstep = 1
-        ijac = 0
-        xstep = h*rat
-        rat = (xout - x)/h
-      end if
-      h = h*rat
-      ifstep = 1
-      nhalf = 0
-      x = x + h
-      con = 1.0_wp + alpha*(rat - 1.0_wp)
-C***********************************************************************
-C REST ARRAYS FOR NEXT STEP
-C***********************************************************************
-      do i = 1, n
-        v1(i) = rat*del(i)
-        yold(i) = pyc(i) - yold(i)
-        pyp(i) = rat*yold(i) + pyc(i)*con*v1(i)
-        yold(i) = pyc(i)
-        yn(i) = yn1(i)
-        fn(i) = rat*fn2(i)
-      end do
-      call pmult(pyc,n,yn1)
-c***********************************************************************
-c output to routine monit if requried
-c***********************************************************************
-      if (imon >= 1) then
-        mon = mon + 1
-        ! output only every imon steps
-        if (imon == mon) then
-          mon = 0
-          im = -1
-          t = x - h
-          do i = 1, n
-            yn(i) = pyc(i)
-          end do
-          im = 0
-          call monit(yn,n,t)
-        end if
-      end if
-C***********************************************************************
-C CALCULATE NEQ PREDICTOR
-C***********************************************************************
-      do i = 1, n
-        pyp(i) = (1.0_wp + rat)*pyc(i) - rat*yold(i) + con*v1(i)
-      end do
-      go to 40
-C***********************************************************************
-C STEP REJECTED
-C***********************************************************************
-  210 nhalf = nhalf + 1
-C***********************************************************************
-C IF STEP SIZE HAS BEEN DOUBLES TO H (IDOHA SET 1) AND THE
-C NEXT STEP ATTEMPTS TO HALVE AGAIN NEW STEP SET 3*H/4
-C***********************************************************************
-      if (idoha == 1) then
-        rat1 = 0.75_wp
-        idoha = 0
-      else
-        rat1 = 0.5_wp
-      end if
-C***********************************************************************
-C MAXIMUM NUMBER OF SUCCESIVE HALVINGS ALLOWED IS 20
-C***********************************************************************
-      if (nhalf >= 20) then
-        ifail = 1
-        go to 280
-      end if
-
-      x = x - (1.0_wp - rat1)*h
-      h = h*rat1
-
-      if (h <= tmin) then
-        ifail = 2
-        go to 280
-      end if
-
-      ijac=0
-C***********************************************************************
-C RESET ARRAYS FOR HALVED STEP SIZE AND CARRY ON
-C***********************************************************************
-      rat = rat*rat1 
-      do i=1,n
-        fn(i)=fn(i)*rat1
-      end do
-      if (ifstep.eq.0) go to 20
-      con=1.0_wp + alpha*(rat - 1.0_wp)
-      do i=1,n
-        v1(i)=v1(i)*rat1
-        pyp(i)=yold(i)-yold1(i)*rat+con*v1(i)
-      end do
-      go to 40
-C
-C NON SUCCESFUL EXIT
-C
-  280 continue
-      xout = x - h
-      do i = 1, n 
-        yn(i) = yold(i)
-      end do
-      return
+          IF (laststep) then
+        ! last step, normal exit
 C***********************************************************************
 C SUCCESSFUL EXIT  RETURN VALUES
 C  PUT RESULTS INTO YN ARRAY FOR OUTPUT
 C***********************************************************************
-  300 xout = x
-      do i = 1, n
-        yn(i) = pyc(i)
-      end do
-      ifail = 0
+            xout = x
+            do i = 1, n
+              yn(i) = pyc(i)
+            end do
+            ifail = 0
+            return
+          end if
+
+          RAT = 1.0_wp
+C***********************************************************************
+C DECIDE FROM VALUE OF REL WHETHER STEP SIZE SHOULD REMAIN
+C UNCHANGED OR BE DOUBLED
+C***********************************************************************
+          idoha = 0
+          if (rel <= 0.2_wp) then
+            rat = 2.0_wp
+            idoha = 1
+            ijac = 0
+          end if
+C***********************************************************************
+C TEST IF NEXT STEP WILL BE LAST STEP
+C***********************************************************************
+          if (abs(xout-x)/(h*rat) <= 1.1_wp) then
+            laststep = .true.
+            ijac = 0
+            xstep = h*rat
+            rat = (xout - x)/h
+          end if
+          h = h*rat
+          firststep = .false.
+          nhalf = 0
+          x = x + h
+          con = 1 + alpha*(rat - 1)
+C***********************************************************************
+C RESET ARRAYS FOR NEXT STEP
+C***********************************************************************
+          do i = 1, n
+            v1(i) = rat*del(i)
+            yold1(i) = pyc(i) - yold(i)
+            pyp(i) = rat*yold(i) + pyc(i) + con*v1(i)
+            yold(i) = pyc(i)
+            yn(i) = yn1(i)
+            fn(i) = rat*fn2(i)
+          end do
+          call pmult(pyc,n,yn1) ! yn1 := B pyc
+c***********************************************************************
+c output to routine monit if requried
+c***********************************************************************
+          if (imon > 0) then
+            mon = mon + 1
+            ! output only every imon steps
+            if (imon == mon) then
+              mon = 0
+              t = x - h
+              do i = 1, n
+                yn(i) = pyc(i)
+              end do
+              call monit(yn,n,t)
+            end if
+          end if
+C***********************************************************************
+C CALCULATE NEQ PREDICTOR
+C***********************************************************************
+          do i = 1, n
+            pyp(i) = (1 + rat)*pyc(i) - rat*yold(i) + con*v1(i)
+          end do
+
+        end block attempt_step
+
+        if (halve_step) then
+C***********************************************************************
+C STEP REJECTED
+C***********************************************************************
+          nhalf = nhalf + 1
+C***********************************************************************
+C IF STEP SIZE HAS BEEN DOUBLES TO H (IDOHA SET 1) AND THE
+C NEXT STEP ATTEMPTS TO HALVE AGAIN NEW STEP SET 3*H/4
+C***********************************************************************
+          if (idoha == 1) then
+            rat1 = 0.75_wp
+            idoha = 0
+          else
+            rat1 = 0.5_wp
+          end if
+C***********************************************************************
+C MAXIMUM NUMBER OF SUCCESIVE HALVINGS ALLOWED IS 20
+C***********************************************************************
+          if (nhalf >= 20) then
+            ifail = 1
+            exit solve
+          end if
+
+          ! calculate new time and stepsize
+          x = x - (1 - rat1)*h
+          h = h*rat1
+
+          if (h <= tmin) then
+            ifail = 2
+            exit solve
+          end if
+
+          ijac = 0 ! Request Jacobian
+!
+! reset arrays for halved step size and carry on
+!
+          rat = rat*rat1
+          do i = 1, n
+            fn(i) = fn(i)*rat1
+          end do
+          if (firststep) then
+            ! halving required on first step
+            call deriv(yn,n,fn,x,h)
+            do i = 1, n
+              yold(i) = yn(i)
+              hjac(i) = 1.0e-3_wp
+              pyp(i) = yn(i)
+            end do
+          else
+            con = 1 + alpha*(rat - 1)
+            do i = 1, n
+              v1(i) = v1(i)*rat1
+              pyp(i) = yold(i) - yold1(i)*rat + con*v1(i)
+            end do
+          end if
+        end if ! halve_step
+
+      end do solve
+!
+! Non-succesful exit
+!
+      failed: block
+        xout = x - h
+        do i = 1, n
+          yn(i) = yold(i)
+        end do
+      end block failed
+
       return
       end
