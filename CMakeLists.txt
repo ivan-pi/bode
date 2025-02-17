@@ -5,7 +5,7 @@ project(bode VERSION 0.1.0 LANGUAGES Fortran C)
 add_library(bode
 	src/bode_module.f90
 	src/bode_nonlin.f90
-	src/bode_solve.f)
+	src/bode_solve.f90)
 
 add_executable(test_banded1 src/test_banded1.f90)
 target_link_libraries(test_banded1 bode)
