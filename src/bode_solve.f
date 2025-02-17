@@ -56,10 +56,31 @@ C
 C    IMN   - THE ROUTINE MONIT IS CALLED AFTER EVERY IMN SUCCESFUL
 C           TIME STEPS UNLESS IMN<=0 WHEN IT IS NEVER CALLED
 C
-C    M1    - A MEASURE OF THE BANDWIDTH OF THE MATRIX B
-C           DEFINED SUCH THATO-
-C           M1 = MAX(C) S.T. B(I,J)=0 FOR MOD(I,J)=C
-C           FOR ALL I,J=1(1)N.
+C    IOPT  - INTEGER ARRAY OF LENGTH 2 THAT SPECIFIES PROPERTIES OF
+C            THE PROBLEM
+C
+C    IOPT(1): A MEASURE OF THE BANDWIDTH OF THE MATRIX B
+C             DEFINED SUCH THATO-
+C             M1 = MAX(C) S.T. B(I,J)=0 FOR MOD(I,J)=C
+C             FOR ALL I,J=1(1)N.
+C
+C             M1 MUST REMAIN THE FIRST ELEMENT OF IOPT FOR BACKWARD
+C             COMPATIBILITY
+C
+C    IOPT(2): IF EQUAL TO 1, A USER-PROVIDED JACOBIAN SUBROUTINE WILL
+C             BE USED. THE USER SUBROUTINE IS OF THE FORM
+C
+C             SUBROUTINE PJACB(X,X1,N,A,LD,M1,H)
+C               INTEGER N, LD, M1
+C               DOUBLE PRECISION X, X1(N), A(LD,2*M1+1), H
+C             END SUBROUTINE
+C
+C             THE PROCEDURE SHOULD EVALUATE THE MATRIX
+C               B - h J
+C             AND STORE THE VALUES IN ARRAY A USING BANDED
+C             COLUMN STORAGE, ASSUMING A STRUCTURALLY SYMMETRIC
+C             BANDED MATRIX WITH BANDWIDTH ML = MU = M1.
+C
 C    IFAIL - ON EXIT IFAIL MAY TAKE THE VALUEO-
 C                  0 - FOR SUCCESFUL INTEGRATION TO X=XOUT
 C                  1 - IF THE TIME STEP HAS BEEN HALVED 20 TIMES
@@ -70,8 +91,9 @@ C                      STATEMENT IN ODE
 C***********************************************************************
 
 
-      SUBROUTINE BODE(XIN,XOUT,N,YN,YMIN,EMAX,XSTEP,MONIT,IMN,M1,IFAIL)
-      use bode_mod, only: wp, ld, tsol
+      SUBROUTINE BODE(XIN,XOUT,N,YN,YMIN,EMAX,XSTEP,MONIT,IMN,IOPT,
+     *                IFAIL)
+      use bode_mod, only: wp, ld, tsol, pmonit
       implicit none
       real(wp), intent(in) :: xin
       real(wp), intent(inout) :: xout
@@ -80,13 +102,14 @@ C***********************************************************************
       real(wp), intent(in) :: ymin(n)
       real(wp), intent(in) :: emax
       real(wp), intent(inout) :: xstep
-      procedure() :: monit
-      integer, intent(in) :: imn, m1
+      procedure(pmonit) :: monit
+      integer, intent(in) :: imn
+      integer, intent(in) :: iopt(2)
       integer, intent(out) :: ifail
 
       interface
-      SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,
-     *EMAX,H,IFAIL)
+      SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,
+     *                  M2,EMAX,H,IFAIL)
         import wp
          implicit none
          integer, intent(in) :: n, ld, m, m1, m2
@@ -94,6 +117,7 @@ C***********************************************************************
          real(wp), intent(in) :: del(n)
          integer, intent(inout) :: ijac
          real(wp), intent(inout) :: hjac(n)
+         logical, intent(in) :: user_jac
          real(wp), intent(in) :: x, h   ! scalars passed to routine deriv
 
          ! storage for the factorized Jacobian
@@ -116,8 +140,8 @@ C
 C
       real(wp) :: con, del1, h, h1, t, rel, rat, rat1, x
 
-      integer :: i, idoha, ijac, im, imon, mon, m, m2, nhalf
-
+      integer :: i, idoha, ijac, im, imon, mon, m, m1, m2, nhalf
+      logical :: user_jac
 C   TMIN  - SMALLEST TIME STEP SUCH THAT X+TMIN AND X
 C           ARE DIFFERENT WITHIN THE MACHINE
 C
@@ -125,6 +149,10 @@ C
       real(wp), parameter :: B = 1.0_wp/6.0_wp
       real(wp), parameter :: alpha = 0.55_wp
       real(wp), parameter :: a = 1.0_wp - alpha
+
+      m1 = iopt(1)
+      user_jac = iopt(2) == 1
+
 C***********************************************************************
 C INITIALIZE THE VARIABLES
 C***********************************************************************
@@ -178,8 +206,8 @@ C***********************************************************************
           end do
           h1 = h*alpha
           ifail = 0
-          call nonlin(x1,n,del,ijac,hjac,x,arr,tl,ld,ipiv,m,m1,m2,emax,
-     *      h1,ifail)
+          call nonlin (x1,n,del,ijac,hjac,user_jac,x,arr,tl,ld,ipiv,m,
+     *                 m1,m2,emax,h1,ifail)
           do i = 1, n
             pyc(i)=x1(i)
           end do

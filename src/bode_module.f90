@@ -39,13 +39,18 @@ end interface
 
 
 interface
-   subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,m1,ifail)
+   subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       import wp, pmonit
-      real(wp) :: xin, xout
-      integer :: n
-      real(wp) :: yn(n), ymin(n), emax, xstep
+      real(wp), intent(in) :: xin
+      real(wp), intent(inout) :: xout
+      integer, intent(in) :: n
+      real(wp), intent(inout) :: yn(n)
+      real(wp), intent(in) :: ymin(n), emax, xstep
       procedure(pmonit) :: monit
-      integer :: imn, m1, ifail
+      !external :: monit
+      integer, intent(in) :: iopt(*)
+      integer, intent(in) :: imn
+      integer, intent(out) :: ifail
    end subroutine
 end interface
 

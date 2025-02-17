@@ -29,7 +29,8 @@
 !           = 3, Newton-Raphson iteration has diverged,
 !                a component of the incremental vector exceeds BIG
 !
-SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,H,IFAIL)
+SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,&
+      H,IFAIL)
    use bode_mod, only: wp, ltri, tsol
    implicit none
    integer, intent(in) :: n, ld, m, m1, m2
@@ -37,6 +38,7 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,H,IFAIL)
    real(wp), intent(in) :: del(n)
    integer, intent(inout) :: ijac
    real(wp), intent(inout) :: hjac(n)
+   logical, intent(in) :: user_jac
    real(wp), intent(in) :: x, h   ! scalars passed to routine deriv
 
    ! storage for the factorized Jacobian
@@ -46,7 +48,6 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,H,IFAIL)
    real(wp), intent(in) :: emax
    integer, intent(inout) :: ifail
 
-   logical, parameter :: use_pjac = .true.
    external :: pjacb
 
    real(wp) :: aa(ld,m)
@@ -64,16 +65,16 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,H,IFAIL)
 
       ijac = 1
 
-      !if (use_pjac) then
+      if (user_jac) then
          !
          ! exact jacobian callback
          !
 
-         call pjacb(x,x1,n,aa,ld,m1,h)
+         call pjacb(x,x1,n,a,ld,m1,h)
 
          !print *, "symbolic jacobian"
          !call printarr(n,m1,aa)
-      !else
+      else
          !
          ! approximate Jacobian `a` using finite differences
          !
@@ -84,8 +85,8 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,H,IFAIL)
 
          !print *, "difference"
          !call printarr(n,m1,a - aa)
-         a = aa
-      !end if
+         ! a = aa
+      end if
       !stop
 
       !
