@@ -81,9 +81,9 @@
 !             COLUMN STORAGE, ASSUMING A STRUCTURALLY SYMMETRIC
 !             BANDED MATRIX WITH BANDWIDTH ML = MU = M1.
 !
-!   IOPT(3): USE DENSE OR BANDED JACOBIAN
-!            = 0, dense jacobian is used
-!            = 1, banded jacobian is used (structurally-symmetric)
+!    IOPT(3): USE DENSE OR BANDED JACOBIAN
+!             = 0, dense jacobian is used
+!             = 1, banded jacobian is used (structurally-symmetric)
 !
 !    IFAIL - ON EXIT IFAIL MAY TAKE THE VALUEO-
 !                  0 - FOR SUCCESFUL INTEGRATION TO X=XOUT
@@ -157,6 +157,8 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   m1 = iopt(1)
   user_jac = iopt(2) == 1
   dense_jac = iopt(3) == 0
+
+  if (dense_jac .neqv. user_jac) error stop "FD Jacobian only supported with banded solver"
 
   nfev = 0
   njev = 0
