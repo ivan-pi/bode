@@ -286,12 +286,11 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
         ifail = 0
         return
       end if
-
-      rat = 1.0_wp
 !
 ! decide from value of rel whether step size should remain
 ! unchanged or be doubled
 !
+      rat = 1.0_wp
       idoha = 0
       if (rel <= 0.2_wp) then
         rat = 2.0_wp
