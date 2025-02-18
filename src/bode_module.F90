@@ -30,13 +30,14 @@ abstract interface
    ! Monitoring procedure whichs allows the user to
    ! monitor the progress of the integration. The array y contains
    ! the computed solution at time x
-   subroutine pmonit(y,n,x)
+   subroutine pmonit(y,n,x,iha,qa)
       import wp
-      integer, intent(in) :: n
-      real(wp), intent(in) :: y(n), x
+      integer, intent(in) :: n, iha
+      real(wp), intent(in) :: y(n), x, qa
    end subroutine
 end interface
 
+integer :: nfev, njev, nlu
 
 interface
    subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
@@ -46,8 +47,11 @@ interface
       integer, intent(in) :: n
       real(wp), intent(inout) :: yn(n)
       real(wp), intent(in) :: ymin(n), emax, xstep
-      procedure(pmonit) :: monit
-      !external :: monit
+!
+! FIXME: For experimental purposes use an external procedure
+!        which allows varying the interface
+      external :: monit
+!      procedure(pmonit) :: monit
       integer, intent(in) :: iopt(*)
       integer, intent(in) :: imn
       integer, intent(out) :: ifail
@@ -58,19 +62,14 @@ end interface
 ! Extensions
 !
 abstract interface
-   ! Evaluate the Jacobian of F(x,y), dF/dy, dense version
-   subroutine pjacd(x,y,n,jac,ld)
-      import wp
-      integer, intent(in) :: n
-      real(wp), intent(in) :: y(n), x
-      real(wp), intent(inout) :: jac(ld,n)
-   end subroutine
    ! Evaluate the Jacobian of F(x,y), dF/dy, banded version
    subroutine pjacb(x,y,n,jac,ld,m1)
       import wp
       integer, intent(in) :: n
       real(wp), intent(in) :: y(n), x
-      real(wp), intent(inout) :: jac(ld,2*m1+1)
+      real(wp), intent(inout) :: jac(ld,*)
+        ! ld-by-(2*m1+1) if banded
+        ! ld-by-n if dense
    end subroutine
 end interface
 

@@ -29,16 +29,16 @@
 !           = 3, Newton-Raphson iteration has diverged,
 !                a component of the incremental vector exceeds BIG
 !
-SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,&
-      H,IFAIL)
-   use bode_mod, only: wp, ltri, tsol
+subroutine nonlin(x1,n,del,ijac,hjac,user_jac,dense_jac,x,a,tl,ld,ipiv,m,m1,m2,&
+                  emax,h,ifail)
+   use bode_mod, only: wp, ltri, tsol, njev, nlu
    implicit none
    integer, intent(in) :: n, ld, m, m1, m2
    real(wp), intent(inout) :: x1(n)
    real(wp), intent(in) :: del(n)
    integer, intent(inout) :: ijac
    real(wp), intent(inout) :: hjac(n)
-   logical, intent(in) :: user_jac
+   logical, intent(in) :: user_jac, dense_jac
    real(wp), intent(in) :: x, h   ! scalars passed to routine deriv
 
    ! storage for the factorized Jacobian
@@ -49,12 +49,12 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,&
    integer, intent(inout) :: ifail
 
    external :: pjacb
+   external :: dgetrf
 
    real(wp) :: aa(ld,m)
 
    ! local scratch space, length n is used
    real(wp) :: y(n), f(n), gg(n), v2(n)
-
    integer :: maxf
 
    !
@@ -87,15 +87,33 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,&
          !call printarr(n,m1,a - aa)
          ! a = aa
       end if
+      njev = njev + 1
       !stop
 
       !
       ! obtain LU decomposition of the Jacobian
       !
-      call ltri(a,tl,ld,n,ipiv,m,m1,m2,ifail)
-      if (ifail /= 0) then
-        ! factorization failed
-        return
+
+      if (dense_jac) then
+         call dgetrf(n,n,a,ld,ipiv,ifail)
+         nlu = nlu + 1
+         if (ifail /= 0) then
+            if (ifail < 0) then
+               write(*,'("Argument ",I0," had an illegal value")') -ifail
+               error stop 1
+            end if
+            ! FIXME: we want to differentiate the LAPACK errors from
+            !        the solver ones
+            ifail = -ifail
+            return
+         end if
+      else
+         call ltri(a,tl,ld,n,ipiv,m,m1,m2,ifail)
+         nlu = nlu + 1
+         if (ifail /= 0) then
+           ! factorization failed
+           return
+         end if
       end if
 
    end if
@@ -103,7 +121,7 @@ SUBROUTINE NONLIN(X1,N,DEL,IJAC,HJAC,USER_JAC,X,A,TL,LD,IPIV,M,M1,M2,EMAX,&
    ! maximum number of iterations allowed before non-convergence is assumed
    maxf = n + 10
    call newton_raphson(n,x1,del,a,tl,ipiv,ld,m1,m2,m, &
-      maxf,emax,f,gg,v2,ifail)
+      maxf,emax,f,gg,v2,dense_jac,ifail)
 
 contains
 
@@ -122,6 +140,7 @@ contains
 
    ! Jacobian approximation using finite differences
    subroutine fdjac(n,x1,del,x,h,hjac,a,ld,m1,m,y,f,gg,v2)
+      use bode_mod, only: nfev
       implicit none
       integer, intent(in) :: n, ld, m, m1
       real(wp), intent(in) :: x1(n), del(n)
@@ -145,6 +164,7 @@ contains
 
       call pmult(x1,n,y)       ! y := B x1
       call deriv(x1,n,gg,x,h)  ! gg := h*f(x,x1)
+      nfev = nfev + 1
 
       f = y - gg - del
       y = x1
@@ -172,7 +192,7 @@ contains
          ! calculate new vector
          call pmult(y,n,v2)        ! v2 := B (y + hjac)
          call deriv(y,n,gg,x,h)    ! gg := h*f(x,y + hjac)
-
+         nfev = nfev + 1
          ! residual vector
          do i = 1, n
             gg(i) = v2(i) - gg(i) - del(i)
@@ -211,14 +231,16 @@ contains
    end subroutine
 
    subroutine newton_raphson(n,x1,del,a,tl,ipiv,ld,m1,m2,m,maxf,emax,&
-         f,gg,v2,ifail)
+         f,gg,v2,dense,ifail)
+      use bode_mod, only: nfev
       implicit none
       integer, intent(in) :: n, ld, m1, m2, m
       real(wp), intent(inout) :: x1(n)
       real(wp), intent(in) :: del(n)
 
       ! The factorized Jacobian
-      real(wp), intent(in) :: a(ld,m), tl(ld,m2)
+      real(wp), intent(in) :: a(ld,*)    ! ld-by-m if banded, ld-by-n if dense
+      real(wp), intent(in) :: tl(ld,m2)
       integer, intent(in) :: ipiv(n)
 
       integer, intent(in) :: maxf
@@ -226,6 +248,7 @@ contains
       ! Scratch space
       real(wp), intent(inout) :: f(n), gg(n), v2(n)
 
+      logical, intent(in) :: dense
       integer, intent(inout) :: ifail
 
       !
@@ -236,6 +259,7 @@ contains
       real(wp), parameter :: big = 1.0e10_wp
 
       external :: pmult, deriv
+      external :: dgetrs
 
       logical :: conv
       integer :: it, i
@@ -246,6 +270,7 @@ contains
          !
          call pmult(x1,n,v2)     ! v2 := B*y
          call deriv(x1,n,gg,x,h)  ! gg := h*f(x,y)
+         nfev = nfev + 1
          do i = 1, n
             f(i) = v2(i) - gg(i) - del(i)
          end do
@@ -253,7 +278,12 @@ contains
          !
          ! solve for incremental vector, gg := (y_{it+1} - y_{it}) = J^(-1) F(y)
          !
-         call tsol(a,tl,ld,m1,m2,m,n,ipiv,f,gg)
+         if (dense) then
+            gg(1:n) = f(1:n)
+            call dgetrs('N',n,1,a,ld,ipiv,gg,n,ifail)
+         else
+            call tsol(a,tl,ld,m1,m2,m,n,ipiv,f,gg)
+         end if
 
          ! increment output vector, while
          ! checking if converged using relative tolerance

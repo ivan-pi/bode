@@ -46,7 +46,7 @@
 !           ZERO THE INITIAL STEP IS SET TO ABS(XOUT-XIN)*0.25
 !    MONIT - A USER SUPPLIED ROUTINE OF THE FORM
 !
-!           SUBROUTINE MONIT(Y,N,X)
+!           SUBROUTINE MONIT(Y,N,X,NHALF)
 !           DIMENSION Y(N)
 !
 !           WHICH ALLOWS THE USER TO MONITOR THE PROGRESS OF THE
@@ -56,7 +56,7 @@
 !    IMN   - THE ROUTINE MONIT IS CALLED AFTER EVERY IMN SUCCESFUL
 !           TIME STEPS UNLESS IMN<=0 WHEN IT IS NEVER CALLED
 !
-!    IOPT  - INTEGER ARRAY OF LENGTH 2 THAT SPECIFIES PROPERTIES OF
+!    IOPT  - INTEGER ARRAY OF LENGTH 3 THAT SPECIFIES PROPERTIES OF
 !            THE PROBLEM
 !
 !    IOPT(1): A MEASURE OF THE BANDWIDTH OF THE MATRIX B
@@ -81,6 +81,10 @@
 !             COLUMN STORAGE, ASSUMING A STRUCTURALLY SYMMETRIC
 !             BANDED MATRIX WITH BANDWIDTH ML = MU = M1.
 !
+!   IOPT(3): USE DENSE OR BANDED JACOBIAN
+!            = 0, dense jacobian is used
+!            = 1, banded jacobian is used (structurally-symmetric)
+!
 !    IFAIL - ON EXIT IFAIL MAY TAKE THE VALUEO-
 !                  0 - FOR SUCCESFUL INTEGRATION TO X=XOUT
 !                  1 - IF THE TIME STEP HAS BEEN HALVED 20 TIMES
@@ -90,7 +94,7 @@
 !                      STATEMENT IN ODE
 !
 subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
-  use bode_mod, only: wp, ld, tsol, pmonit
+  use bode_mod, only: wp, ld, tsol, pmonit, nfev, njev, nlu
   implicit none
   real(wp), intent(in) :: xin
   real(wp), intent(inout) :: xout
@@ -101,12 +105,12 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   real(wp), intent(inout) :: xstep
   procedure(pmonit) :: monit
   integer, intent(in) :: imn
-  integer, intent(in) :: iopt(2)
+  integer, intent(in) :: iopt(3)
   integer, intent(out) :: ifail
 
   interface
-    subroutine nonlin(x1,n,del,ijac,hjac,user_jac,x,a,tl,ld,ipiv,m,m1,m2, &
-                      emax,h,ifail)
+    subroutine nonlin(x1,n,del,ijac,hjac,user_jac,dense_jac,x,a,tl,ld,ipiv,&
+                      m,m1,m2,emax,h,ifail)
       import wp
       implicit none
       integer, intent(in) :: n, ld, m, m1, m2
@@ -114,7 +118,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       real(wp), intent(in) :: del(n)
       integer, intent(inout) :: ijac
       real(wp), intent(inout) :: hjac(n)
-      logical, intent(in) :: user_jac
+      logical, intent(in) :: user_jac, dense_jac
       real(wp), intent(in) :: x, h   ! scalars passed to routine deriv
 
       ! storage for the factorized jacobian
@@ -126,6 +130,8 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
     end subroutine
   end interface
 
+  ! LAPACK procedures
+  external :: dgetrs
 !
 ! local variables
 !
@@ -135,10 +141,10 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   integer :: ipiv(ld)
   logical :: laststep, firststep, halve_step
 
-  real(wp) :: con, del1, h, h1, t, rel, rat, rat1, x
+  real(wp) :: con, h, h1, t, rel, rat, rat1, x
 
-  integer :: i, idoha, ijac, im, imon, mon, m, m1, m2, nhalf
-  logical :: user_jac
+  integer :: i, idoha, ijac, im, imon, mon, m, m1, m2, nhalf, la_info
+  logical :: user_jac, dense_jac
 !
 ! tmin  - smallest time step such that x+tmin and x
 !         are different within the machine
@@ -150,7 +156,11 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 
   m1 = iopt(1)
   user_jac = iopt(2) == 1
+  dense_jac = iopt(3) == 0
 
+  nfev = 0
+  njev = 0
+  nlu = 0
 !
 ! initialize the variables
 !
@@ -158,6 +168,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   m2 = m1 + 1
   m = 2*m1 + 1
   if (m > 20) error stop "bandwidth exceeds limit of 20"
+  if (n > 20) error stop "size exceeds workspace of arr"
 !
 ! initialize the other required variables
 !
@@ -183,6 +194,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 !
   call pmult(yn,n,yn1)
   call deriv(yn,n,fn,x,h)
+  nfev = nfev + 1
 !
 ! use initial values as first predicted valeus
 !
@@ -206,8 +218,8 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 
       h1 = h*alpha
       ifail = 0
-      call nonlin (x1,n,del,ijac,hjac,user_jac,x,arr,tl,ld,ipiv,m,m1,m2,&
-                   emax,h1,ifail)
+      call nonlin (x1,n,del,ijac,hjac,user_jac,dense_jac,x,arr,tl,ld,ipiv,&
+                   m,m1,m2,emax,h1,ifail)
 
       do i = 1, n
         pyc(i)=x1(i)
@@ -219,14 +231,26 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
     !
     ! calculate required arrays from corrected values
     !
-      call deriv (pyc,n,fn2,x,h) ! fn2 := h*f(x,pyc)
+      call deriv(pyc,n,fn2,x,h) ! fn2 := h*f(x,pyc)
+      nfev = nfev + 1
     !
     ! calculate vectors required for local error estimates
     !
       do i = 1, n
         pyp(i) = fn2(i) - fn(i)
       end do
-      call tsol(arr,tl,ld,m1,m2,m,n,ipiv,pyp,del) ! del :=
+
+      if (dense_jac) then
+        del(1:n) = pyp(1:n)
+        call dgetrs('N',n,1,arr,ld,ipiv,del,ld,la_info)
+        if (la_info /= 0) then
+          write(*,'("DGETRF INFO = ", I0)') la_info
+          error stop
+        end if
+      else
+        call tsol(arr,tl,ld,m1,m2,m,n,ipiv,pyp,del) ! del :=
+      end if
+
       if (firststep) then
         ! first step
         do i = 1, n
@@ -243,20 +267,15 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
             pyp(i) = con*(del(i) - v1(i)*rat)
           end do
       end if
-
 !
 ! calculate maximum relative local truncation error estimates
 !
-      rel = 0.0_wp
-      do i = 1, n
-        del1 = abs(pyp(i) + (alpha - 0.5_wp)*del(i)) / (abs(pyc(i)) + ymin(i))
-        rel = max(rel,del1)
-      end do
-      rel = rel/emax
+      rel = maxval(abs(pyp(1:n) + (alpha - 0.5_wp)*del(1:n)) / &
+                   (abs(pyc(1:n)) + ymin)) / emax
 !
 ! if rel > 1  halve step size
 !
-      halve_step = REL > 1.0_wp
+      halve_step = rel > 1.0_wp
       if (halve_step) exit attempt_step
 !
 ! succesful step test for last step
@@ -297,7 +316,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       end if
       h = h*rat
       firststep = .false.
-      nhalf = 0
+
       x = x + h
       con = 1 + alpha*(rat - 1)
 !
@@ -324,15 +343,17 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
           do i = 1, n
             yn(i) = pyc(i)
           end do
-          call monit(yn,n,t)
+          call monit(yn,n,t,nhalf,rat)
         end if
       end if
+      nhalf = 0
 !
-! CALCULATE NEQ PREDICTOR
+! calculate neq predictor
 !
       do i = 1, n
         pyp(i) = (1 + rat)*pyc(i) - rat*yold(i) + con*v1(i)
       end do
+
 
     end block attempt_step
 
@@ -380,6 +401,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       if (firststep) then
         ! halving required on first step
         call deriv(yn,n,fn,x,h)
+        nfev = nfev + 1
         do i = 1, n
           yold(i) = yn(i)
           hjac(i) = 1.0e-3_wp
