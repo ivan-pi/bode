@@ -1,0 +1,44 @@
+! The following procedures are adapted from the work
+!
+!   Jeff Thorson, Gaussian elimination on a banded matrix
+!   https://sep.stanford.edu/data/media/public/oldreports/sep20/20_11_abs.html
+!
+! The author of the codes is Jeffrey R. Thorson, a member of the
+! Stanford Exploration Project and student (?) of Jon Claerbout, geophysics
+! professor at Stanford University. Thorson's Dissertation (1984) is catalogued
+! at:
+!      https://search.worldcat.org/en/title/38632165
+!
+interface bandf
+   subroutine sbandf(a,m,n,p,ifail)
+      integer, parameter :: sp = kind(1.0e0)
+      integer, intent(in) :: m, n
+      integer, intent(out) :: p(n)
+      real(sp), intent(inout) :: a(n,*)
+      integer, intent(out) :: ifail
+   end subroutine
+   subroutine dbandf(a,m,n,p)
+      integer, parameter :: dp = kind(1.0d0)
+      integer, intent(in) :: m, n
+      integer, intent(out) :: p(n)
+      real(dp), intent(inout) :: a(n,*)
+      integer, intent(out) :: ifail
+   end subroutine
+end interface
+
+interface
+   subroutine sbands(a,b,m,n,p)
+      integer, parameter :: dp = kind(1.0d0)
+      integer, intent(in) :: m, n
+      integer, intent(in) :: p(n)
+      real(sp), intent(in) :: a(n,*)
+      real(dp), intent(inout) :: b(n)
+   end subroutine
+   subroutine dbands(a,b,m,n,p)
+      integer, parameter :: dp = kind(1.0d0)
+      integer, intent(in) :: m, n
+      integer, intent(in) :: p(n)
+      real(dp), intent(in) :: a(n,*)
+      real(dp), intent(inout) :: b(n)
+   end subroutine
+end interface

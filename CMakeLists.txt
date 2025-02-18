@@ -29,3 +29,8 @@ add_executable(test_vdp_old src/test_van_der_pol.f90 src/bode.f)
 add_library(band
     src/band.f
     src/solve.f)
+
+# Adapted procedures
+add_library(bandfs
+    src/bandf.f
+    src/bands.f)
