@@ -135,13 +135,13 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 !
 ! local variables
 !
-  real(wp) :: yold1(ld), arr(ld,20), tl(ld,20), x1(ld)
-  real(wp) :: del(ld), fn(ld), yn1(ld), yold(ld), pyp(ld), fn2(ld)
-  real(wp) :: v1(ld), pyc(ld), hjac(ld)
-  integer :: ipiv(ld)
+  real(wp) :: yold1(n), arr(ld,20), tl(ld,20), x1(n)
+  real(wp) :: del(n), fn(n), yn1(n), yold(n), pyp(n), fn2(n)
+  real(wp) :: v1(n), pyc(n), hjac(n)
+  integer :: ipiv(n)
   logical :: laststep, firststep, halve_step
 
-  real(wp) :: con, h, h1, t, rel, rat, rat1, x
+  real(wp) :: con, h, h1, rel, rat, rat1, x
 
   integer :: i, idoha, ijac, im, imon, mon, m, m1, m2, nhalf, la_info
   logical :: user_jac, dense_jac
@@ -153,6 +153,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   real(wp), parameter :: b = 1.0_wp/6.0_wp
   real(wp), parameter :: alpha = 0.55_wp
   real(wp), parameter :: a = 1.0_wp - alpha
+  real(wp), parameter :: zero = 0
 
   m1 = iopt(1)
   user_jac = iopt(2) == 1
@@ -178,14 +179,14 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   mon = 0
   idoha = 0
   nhalf = 0
-  rat = 0.0_wp
+  rat = zero
   firststep = .true.
   im = 0
   ijac = 0
 !
 ! set up initial time step
 !
-  if (xstep == 0.0_wp) xstep = abs(xout - xin)*0.25_wp
+  if (xstep == zero) xstep = abs(xout - xin)*0.25_wp
   h = xstep
 !
 ! test if only one step is required and if so set laststep
@@ -214,19 +215,15 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   !
     attempt_step: block
 
-      do i =1,n
-        x1(i) = pyp(i) ! y
-        del(i) = yn1(i) + a*fn(i) ! B*y + (1 - gamma)*(h*f(y))
-      end do
+      x1 = pyp           ! y
+      del = yn1 + a*fn   ! B*y + (1 - gamma)*(h*f(y))
 
       h1 = h*alpha
       ifail = 0
       call nonlin (x1,n,del,ijac,hjac,user_jac,dense_jac,x,arr,tl,ld,ipiv,&
                    m,m1,m2,emax,h1,ifail)
 
-      do i = 1, n
-        pyc(i)=x1(i)
-      end do
+      pyc = x1
 
       halve_step = IFAIL /= 0
       if (halve_step) exit attempt_step
@@ -239,12 +236,10 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
     !
     ! calculate vectors required for local error estimates
     !
-      do i = 1, n
-        pyp(i) = fn2(i) - fn(i)
-      end do
+      pyp = fn2 - fn
 
       if (dense_jac) then
-        del(1:n) = pyp(1:n)
+        del = pyp
         call dgetrs('N',n,1,arr,ld,ipiv,del,ld,la_info)
         if (la_info /= 0) then
           write(*,'("DGETRF INFO = ", I0)') la_info
@@ -257,9 +252,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 
       if (firststep) then
         ! first step
-        do i = 1, n
-            pyp(i) = 0.0_wp
-        end do
+        pyp = zero
       else
           ! CALCULATIONS FOR LOCAL ERROR, omitted if first step
           if (rat >= 0.5_wp) then
@@ -267,15 +260,13 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
           else
             con = b*rat/(1 + rat)
           end if
-          do i = 1, n
-            pyp(i) = con*(del(i) - v1(i)*rat)
-          end do
+          pyp = con*(del - v1*rat)
       end if
 !
 ! calculate maximum relative local truncation error estimates
 !
-      rel = maxval(abs(pyp(1:n) + (alpha - 0.5_wp)*del(1:n)) / &
-                   (abs(pyc(1:n)) + ymin)) / emax
+      rel = maxval(abs(pyp + (alpha - 0.5_wp)*del) / &
+                   (abs(pyc) + ymin)) / emax
 !
 ! if rel > 1  halve step size
 !
@@ -291,9 +282,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 !  put results into yn array for output
 !
         xout = x
-        do i = 1, n
-          yn(i) = pyc(i)
-        end do
+        yn = pyc
         ifail = 0
         return
       end if
@@ -341,23 +330,16 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       if (imon > 0) then
         mon = mon + 1
         ! output only every imon steps
-        if (imon == mon) then
+        if (mon == imon) then
+          call monit(pyc,n,x-h,nhalf,rat)
           mon = 0
-          t = x - h
-          do i = 1, n
-            yn(i) = pyc(i)
-          end do
-          call monit(yn,n,t,nhalf,rat)
         end if
       end if
       nhalf = 0
 !
 ! calculate neq predictor
 !
-      do i = 1, n
-        pyp(i) = (1 + rat)*pyc(i) - rat*yold(i) + con*v1(i)
-      end do
-
+      pyp = (1 + rat)*pyc - rat*yold + con*v1
 
     end block attempt_step
 
@@ -398,9 +380,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 ! reset arrays for halved step size and carry on
 !
       rat = rat*rat1
-      do i = 1, n
-        fn(i) = fn(i)*rat1
-      end do
+      fn = fn*rat1
 
       if (firststep) then
         ! halving required on first step
@@ -426,9 +406,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
 !
   failed: block
     xout = x - h
-    do i = 1, n
-      yn(i) = yold(i)
-    end do
+    yn = yold
   end block failed
 
 end subroutine
