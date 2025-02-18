@@ -46,7 +46,7 @@
 !           ZERO THE INITIAL STEP IS SET TO ABS(XOUT-XIN)*0.25
 !    MONIT - A USER SUPPLIED ROUTINE OF THE FORM
 !
-!           SUBROUTINE MONIT(Y,N,X,NHALF)
+!           SUBROUTINE MONIT(Y,N,X,NHALF,R)
 !           DIMENSION Y(N)
 !
 !           WHICH ALLOWS THE USER TO MONITOR THE PROGRESS OF THE
@@ -94,7 +94,7 @@
 !                      STATEMENT IN ODE
 !
 subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
-  use bode_mod, only: wp, ld, tsol, pmonit, nfev, njev, nlu
+  use bode_mod, only: wp, ld, tsol, pmonit, nfev, njev, nlu, nbsol
   implicit none
   real(wp), intent(in) :: xin
   real(wp), intent(inout) :: xout
@@ -163,6 +163,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
   nfev = 0
   njev = 0
   nlu = 0
+  nbsol = 0
 !
 ! initialize the variables
 !
@@ -252,6 +253,7 @@ subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
       else
         call tsol(arr,tl,ld,m1,m2,m,n,ipiv,pyp,del) ! del :=
       end if
+      nbsol = nbsol + 1
 
       if (firststep) then
         ! first step

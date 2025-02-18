@@ -232,7 +232,7 @@ contains
 
    subroutine newton_raphson(n,x1,del,a,tl,ipiv,ld,m1,m2,m,maxf,emax,&
          f,gg,v2,dense,ifail)
-      use bode_mod, only: nfev
+      use bode_mod, only: nfev, nbsol
       implicit none
       integer, intent(in) :: n, ld, m1, m2, m
       real(wp), intent(inout) :: x1(n)
@@ -284,6 +284,7 @@ contains
          else
             call tsol(a,tl,ld,m1,m2,m,n,ipiv,f,gg)
          end if
+         nbsol = nbsol + 1
 
          ! increment output vector, while
          ! checking if converged using relative tolerance

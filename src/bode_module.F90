@@ -37,7 +37,10 @@ abstract interface
    end subroutine
 end interface
 
-integer :: nfev, njev, nlu
+integer :: nfev   ! Number of function evaluations
+integer :: njev   ! Number of Jacobian evaluations
+integer :: nlu    ! Number of LU factorizations
+integer :: nbsol  ! Number of backward solves
 
 interface
    subroutine bode(xin,xout,n,yn,ymin,emax,xstep,monit,imn,iopt,ifail)
