@@ -1,28 +1,28 @@
 
 interface bandf
-   subroutine sbandf(a,m,n,p,ifail)
+   subroutine sbandf(a,m,n,p,info)
       integer, parameter :: sp = kind(1.0e0)
       integer, intent(in) :: m, n
       integer, intent(out) :: p(n)
       real(sp), intent(inout) :: a(n,*)
-      integer, intent(out) :: ifail
+      integer, intent(out) :: info
    end subroutine
-   subroutine dbandf(a,m,n,p)
+   subroutine dbandf(a,m,n,p,info)
       integer, parameter :: dp = kind(1.0d0)
       integer, intent(in) :: m, n
       integer, intent(out) :: p(n)
       real(dp), intent(inout) :: a(n,*)
-      integer, intent(out) :: ifail
+      integer, intent(out) :: info
    end subroutine
 end interface
 
-interface
+interface bands
    subroutine sbands(a,b,m,n,p)
-      integer, parameter :: dp = kind(1.0d0)
+      integer, parameter :: sp = kind(1.0e0)
       integer, intent(in) :: m, n
       integer, intent(in) :: p(n)
       real(sp), intent(in) :: a(n,*)
-      real(dp), intent(inout) :: b(n)
+      real(sp), intent(inout) :: b(n)
    end subroutine
    subroutine dbands(a,b,m,n,p)
       integer, parameter :: dp = kind(1.0d0)

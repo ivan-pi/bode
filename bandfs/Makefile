@@ -15,6 +15,12 @@ src/bandf.f: bandfs/bandf.fpp
 src/bands.f: bandfs/bands.fpp
 	$(FYPP) $< $@
 
+FC=gfortran
+FFLAGS=-Wall
+
+banded_example: src/bandf.f src/bands.f bandfs/banded_example.f90
+	$(FC) $(FFLAGS) -I$(CURDIR)/bandfs/ -o $@ $^ -llapack
+
 .PHONY: clean
 clean:
 	$(RM) $(FFILES)

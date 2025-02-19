@@ -31,7 +31,7 @@ c     Pivots are selected from the column below the
 c     current diagonal element. Row interchange infor-
 c     mation is stored in the integer vector p(n),
 c     which is used by subroutine sbands'. The
-c     horizonal dimension of 'a' must be at least
+c     horizontal dimension of 'a' must be at least
 c     m + (m-1)/2 : the extra (m-1)/2 superdiagonals
 c     of A provide space for the interchanged rows. On
 c     normal exit, ifail is zero. If a very small pivot
@@ -148,7 +148,7 @@ c     Pivots are selected from the column below the
 c     current diagonal element. Row interchange infor-
 c     mation is stored in the integer vector p(n),
 c     which is used by subroutine dbands'. The
-c     horizonal dimension of 'a' must be at least
+c     horizontal dimension of 'a' must be at least
 c     m + (m-1)/2 : the extra (m-1)/2 superdiagonals
 c     of A provide space for the interchanged rows. On
 c     normal exit, ifail is zero. If a very small pivot
