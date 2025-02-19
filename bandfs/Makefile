@@ -1,4 +1,8 @@
 # Makefile for the templated Fortran procedures bandf and bands
+# Designed to be launched from the root project folder, e.g.
+#
+#   make -f bandfs/Makefile
+#
 
 FYPP=fypp
 

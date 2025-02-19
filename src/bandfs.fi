@@ -1,14 +1,4 @@
-! The following procedures are adapted from the work
-!
-!   Jeff Thorson, Gaussian elimination on a banded matrix
-!   https://sep.stanford.edu/data/media/public/oldreports/sep20/20_11_abs.html
-!
-! The author of the codes is Jeffrey R. Thorson, a member of the
-! Stanford Exploration Project and student (?) of Jon Claerbout, geophysics
-! professor at Stanford University. Thorson's Dissertation (1984) is catalogued
-! at:
-!      https://search.worldcat.org/en/title/38632165
-!
+
 interface bandf
    subroutine sbandf(a,m,n,p,ifail)
       integer, parameter :: sp = kind(1.0e0)
