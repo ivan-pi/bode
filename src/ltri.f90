@@ -12,11 +12,10 @@
 ! m21,m1,m3 ... sizes ??
 ! ifail ... error flag (0 on success, 1 if singular)
 ! 
-subroutine ltri(a,tl,n,ipiv,m21,m1,m3,ifail)
-    use bode_mod, only: wp, ld
+subroutine ltri(a,tl,ld,n,ipiv,m21,m1,m3,ifail)
+    use bode_mod, only: wp
     implicit none
-
-    integer, intent(in) :: m1, m3, m21, n
+    integer, intent(in) :: ld, m1, m3, m21, n
     integer, intent(out) :: ipiv(n), ifail
     real(wp), intent(inout) :: a(ld,m21), tl(ld,m3)
 
@@ -50,13 +49,11 @@ subroutine ltri(a,tl,n,ipiv,m21,m1,m3,ifail)
             x = a(j,1)
             i = j
         end do
-
-        if (x <= epsilon(x)) then
+        ipiv(k) = i
+        if (x == 0.0_wp) then
             ifail = 1    ! zero pivot
             return
         end if
-
-        ipiv(k) = i
         if (i /= k) then
             ! swap rows
             do j = 1, m21
@@ -65,7 +62,6 @@ subroutine ltri(a,tl,n,ipiv,m21,m1,m3,ifail)
                 a(i,j) = x
             end do
         end if
-
         k1 = k + 1
         do i = k1, l
             x = a(i,1)/a(k,1)
@@ -87,28 +83,29 @@ end subroutine
 ! A, TL ... matrix factors
 ! n ... size of linear system
 ! m1, m3, m21 ... sizes of ???
-! int ... vector of pivots
+! ipiv ... vector of pivots
 ! xin ... b
 ! xout ... x
 !
 ! TODO: modify routine to over-write vector b,
 !       users should make a copy externally if needed
 ! 
-subroutine tsol(a,tl,m1,m3,m21,n,ipiv,xin,xout)
-    use bode_mod, only: wp, ld
+subroutine tsol(a,tl,ld,m1,m3,m21,n,ipiv,xin,xout)
+    use bode_mod, only: wp
     implicit none
-
-    integer, intent(in) :: m1, m3, m21, n, ipiv(n)
+    integer, intent(in) :: ld, m1, m3, m21, n, ipiv(n)
     real(wp), intent(in) :: a(ld,m21), tl(ld,m3), xin(n)
     real(wp), intent(out) :: xout(n)
 
     integer :: i, l, k, k1, ik, ii
     real(wp) :: x
 
+    ! Copy input vector
     do i = 1, n
         xout(i) = xin(i)
     end do
 
+    ! Solve Lf = P^(-1)b for f
     l = m1
     do k = 1, n
         i = ipiv(k)
@@ -126,6 +123,7 @@ subroutine tsol(a,tl,m1,m3,m21,n,ipiv,xin,xout)
         end do
     end do
 
+    ! Solve Ux = f for x
     l = 1
     do ii = 1, n
         i = n - ii + 1
@@ -134,6 +132,7 @@ subroutine tsol(a,tl,m1,m3,m21,n,ipiv,xin,xout)
             k1 = k + i - 1
             x = x - a(i,k) * xout(k1)
         end do
+        xout(i) = x/a(i,1)
         if (l < m21) l = l + 1
     end do
 
