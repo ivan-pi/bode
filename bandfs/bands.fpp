@@ -17,7 +17,7 @@ c     ---------------------------------------------------
       implicit none
       integer, parameter :: rk = kind(${lit}$)
       integer, intent(in) :: m, n
-      real(kind=rk), intent(in) :: a(n,m)
+      real(kind=rk), intent(in) :: a(n,*)
       real(kind=rk), intent(inout) :: b(n)
       integer, intent(in) :: p(n)
 

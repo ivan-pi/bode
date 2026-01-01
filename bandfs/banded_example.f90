@@ -25,6 +25,7 @@ real(wp) :: ab(bw+m1,n)
 integer :: info
 
 ! BANDFS procedure interfaces
+! N.b. these only work on structurally symmetric banded matrices
 include "bandfs.fi"
 
 ! Dense matrix
