@@ -6,21 +6,27 @@
 
 FYPP=fypp
 
-FFILES = src/bandf.f src/bands.f
+# Directory Definitions
+SRCDIR = src
+FPPDIR = bandfs
 
-all: $(FFILES)
+TARGETS = src/bandf.f src/bands.f
 
-src/bandf.f: bandfs/bandf.fpp
-	$(FYPP) $< $@
-src/bands.f: bandfs/bands.fpp
+all: $(TARGETS)
+
+# The Generalized Pattern Rule
+$(SRCDIR)/%.f: $(FPPDIR)/%.fpp
 	$(FYPP) $< $@
 
 FC=gfortran
 FFLAGS=-Wall
 
-banded_example: src/bandf.f src/bands.f bandfs/banded_example.f90
+banded_example: $(TARGETS) bandfs/banded_example.f90
 	$(FC) $(FFLAGS) -I$(CURDIR)/bandfs/ -o $@ $^ -llapack
+
+bandfs_demo: $(TARGETS) bandfs/bandfs_demo.f90
+	$(FC) $(FFLAGS) -I$(CURDIR)/bandfs/ -o $@ $^
 
 .PHONY: clean
 clean:
-	$(RM) $(FFILES)
+	$(RM) $(TARGETS)
