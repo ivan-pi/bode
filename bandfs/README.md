@@ -1,42 +1,190 @@
-The procedures in this folder are adapted from the work
+# bandfs
 
-> Jeff Thorson, Gaussian elimination on a banded matrix
+This folder contains procedures for banded LU-factorization and back-substitution,
+templated for single and double precision `real` kinds.
+
+The procedures are adapted from the complex-type subroutines originally
+developed by:
+
+> Jeff Thorson, Gaussian elimination on a banded matrix, Stanford Exploration
+> Project: Report No. 20, October 1979
 > https://sep.stanford.edu/data/media/public/oldreports/sep20/20_11_abs.html
 
-The author Jeffrey R. Thorson was a member of the
-Stanford Exploration Project and student (?) of Jon Claerbout, geophysics
-professor at Stanford University. Thorson's Dissertation (1984) is catalogued
-at: https://search.worldcat.org/en/title/38632165
+The original complex routines can be found in the [`complex/`](./complex)
+sub-folder.
 
-The routines use column storage of the matrix, i.e. the diagonals are stored
-as columns, similar to SLATEC.
+---
 
-The factorization is performed using the procedure,
+**Contents:**
+* [Usage](./README.md#usage)
+* [Procedure Reference](./README.md#procedure-reference)
+  - [Banded Storage](./README.md#banded-storage)
+  - [bandf](./README.md#bandf)
+  - [bands](./README.md#bands)
+  - [bndmv](./README.md#bndmv)
+* [Historical Note](./README.md#other)
+
+# Usage
+
+The following program demonstrates how to solve a 5 × 5 tridiagonal system
+using the procedured `bandf` and `bands`.
+Note how the custom arrays bounds are used to center the matrix in column 0.
+The array is padded with `h = (m-1)/2` columns necessary for pivoting.
+
 ```fortran
-! Banded factorization
+program bandfs_demo
+  implicit none
+
+  ! Select work precision
+  integer, parameter :: wp = kind(1.0d0)
+
+  ! BANDFS procedure interfaces
+  include "bandfs.fi"
+
+  integer, parameter :: n = 5, m = 3  ! Dimension and bandwidth
+  integer, parameter :: h = (m-1)/2   ! Half-bandwidth
+
+  ! Array storage
+  real(wp) :: a(n,-h:h+h), b(n)
+  integer  :: ipiv(n), info
+
+  ! Gilbert Strang's favorite matrix (second order differences)
+  a(:,-1) = [ 0,-1,-1,-1,-1]  ! Lower diagonal
+  a(:, 0) = [ 2, 2, 2, 2, 2]  ! Main diagonal
+  a(:, 1) = [-1,-1,-1,-1, 0]  ! Upper diagonal
+
+  ! Right-hand side for a target solution of x = [1, 2, 3, 4, 5]
+  b = [ 0, 0, 0, 0, 6]
+
+  ! 1. Perform LU Factorization
+  ! 'a' is modified in-place; 'ipiv' stores pivoting sequence
+  call bandf(a, m, n, ipiv, info)
+
+  if (info /= 0) then
+     write(*,'(A)') "Error: Matrix is singular or factorization failed."
+     stop 1
+  end if
+
+  ! 2. Solve the system
+  ! 'b' is overwritten with the solution vector 'x'
+  call bands(a, b, m, n, ipiv)
+
+  write(*,'(A,/,*(2X,F6.3,:,/))') "Solution x:", b
+
+end program
+```
+
+# Procedure Reference
+
+## Banded Storage
+
+The diagonals of matrix $A$ are stored in array `A(1:n,1:m)` where `n`
+is the dimension of the system and `m` is the bandwidth (`m` must be odd).
+
+The matrix is stored in row-wise manner, with the diagonals of matrix $A$
+loaded into columns of array `A`. Thus, element $A_{ij}$ is to be loaded
+into element `A(i,j-i+(m-1)/2)`. **Note:** this row-wise storage order differs
+from the column-wise format used in the LINPACK and LAPACK libraries.
+
+The procedures `bandf` and `bands` are limited to _structurally_ symmetric
+banded matrices,where the number of lower and upper diagonals are equal:
+`ml = mu = (m-1)/2`.
+
+Due to the fill-in during factorization, the second dimension of `A` must
+be at least `m + (m-1)/2`. The extra `(m-1)/2` columns of padding provide
+workspace for the interchanged rows during pivoting.
+
+The same storage scheme is used by the SLATEC library procedures [`dnbfa`](https://netlib.org/slatec/src/dnbfa.f)/[`dnbsl`](https://netlib.org/slatec/src/dnbsl.f),
+tohugh SLATEC does not impose symmetry restrictions.
+
+### Examples
+
+**Example 1 (tridiagonal):** If the original matrix is
+```
+11 22  0  0  0
+21 22 23  0  0
+ 0 32 33 34  0
+ 0  0 43 44 45
+ 0  0  0 54 55
+```
+then `n = 5`, `m = 3`, and the array `A` should contain
+```
+ * 11 12 +     , * = not used
+21 22 23 +     , + = used for pivoting
+32 33 34 +
+43 44 45 +
+54 55  * +
+```
+
+**Example 2 (pentadiagonal):** If the original matrix is,
+```
+11 12 13  0  0  0
+21 22 23 24  0  0
+ 0 32 33 34 35  0
+ 0  0 43 44 45 46
+ 0  0  0 54 55 56
+ 0  0  0 64 65 66
+```
+then `n = 6`, `m = 5`, and the array `A` should contain
+```
+ *  * 11 12 13  +  +      , * = not used
+ * 21 22 23 24  +  +      , + = used for pivoting
+ 0 32 33 34 35  +  +
+ 0 43 44 45 45  +  +
+ 0 54 55 56  *  +  +
+64 65 66  *  *  +  +
+```
+
+## `bandf()`
+
+Banded LU factorization with partial pivoting
+
+```fortran
 subroutine bandf(a,m,n,p,ifail)
   integer, intent(in) :: m, n
-  real(kind=rk), intent(inout) :: a(n,*)
+  real(kind=[sp,dp]), intent(inout) :: a(n,*)
   integer, intent(out) :: p(n)
   integer, intent(out) :: ifail
 ```
-where
-* `a`, the values of the banded matrix; the matrix should have an additional `(m-1)/2` columns as storage for the factorization
-* `m`, the bandwidth of the matrix (i.e. `m = ml + mu + 1`)
-* `n`, the dimension of the system of linear equations
-* `p`, the vector of pivots
-* `ifail`, status flag, zero on success
 
-Once factorized, the the solution of the system can be obtained by calling `bands`:
+Arguments:
+* `a`: The values of the banded matrix. The second dimension must be at least `m + (m-1)/2`. On output contains the factorized matrix.
+* `m`: The full bandwidth of the matrix (total number of diagonals).
+* `n`: The dimension of the system (number of rows).
+* `p`: Output array of pivot indices.
+* `ifail`: Error flag (0 on success, non-zero if the matrix is singular).
+
+Available as generic `bandf` or specific names `sbandf`/`dbandf`.
+
+## `bands()`
+
+Solve the banded system $Ax = b$ using the factorization generated by `bandf`.
+
 ```fortran
-! Banded back-substitution (aka solve)
 subroutine bands(a,b,m,n,p)
    integer, intent(in) :: m, n
-   real(kind=rk), intent(in) :: a(n,*)
-   real(kind=rk), intent(inout) :: b(n)
+   real(kind=[sp,dp]), intent(in) :: a(n,*)
+   real(kind=[sp,dp]), intent(inout) :: b(n)
    integer, intent(in) :: p(n)
 ```
-Upon entry, `b` should contain the values of the right-hand side of the system `A x = b`. Upon exit, `b` contains the solution values `x`.
 
-The routines can also be referred to by their specific names `sbandf/dbandf` and `sbands/dbands` for single and double precision, respectively.
+Dummy arguments:
+- `a`: The factorized matrix returned by `bandf`.
+- `b`: Upon entry, the right-hand side. Upon exit, the solution vector $x$.
+- `m`: The full bandwidth of the matrix (total number of diagonals).
+- `n`: The dimension of the system (number of rows).
+- `p`: Array of pivot indices from `bandf`.
 
+Available as generic `bands` or specific names `sbands`/`dbands`.
+
+## `bndmv()`
+
+Matrix-vector multiplication `y := beta y + alpha A x`
+
+# Historical Note
+
+According to various internet sources, the author Jeffrey R. Thorson was a
+member of the Stanford Exploration Project (SEP) led by [Jon Claerbout](https://sep.stanford.edu/sep/jon/) (geophysics professor at Stanford University).
+Thorson's dissertation (1984) appears in the [WorldCat](https://search.worldcat.org/en/title/38632165) catalogue.
+
+The work on Gaussian elimination is part on an [old report](https://sep.stanford.edu/data/media/public/oldreports/sep20/).
