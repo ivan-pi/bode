@@ -13,7 +13,7 @@ TARGET_NAMES = bandf.f bands.f bndmv.f90
 TARGETS = $(addprefix $(GEN_DIR)/, $(TARGET_NAMES))
 
 # Example Programs
-EXAMPLES = banded_example bandfs_demo
+EXAMPLES = banded_example bandfs_demo bandfs_reaction_diffusion
 
 # --- Target-Specific Variables ---
 # This appends -llapack only when building banded_example
