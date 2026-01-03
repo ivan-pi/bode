@@ -5,16 +5,23 @@ FFLAGS = -Wall -Og -g
 # Directory Definitions
 TEMPLATE_DIR = templates
 GEN_DIR = .
+DIST_NAME = bandfs
+DATE = $(shell date +%Y-%m-%d)
 
-# List of templates to be generated
+# Generated Files
 TARGET_NAMES = bandf.f bands.f bndmv.f90
-
-# Variable Expansion
 TARGETS = $(addprefix $(GEN_DIR)/, $(TARGET_NAMES))
+
+# Example Programs
+EXAMPLES = banded_example bandfs_demo
+
+# --- Target-Specific Variables ---
+# This appends -llapack only when building banded_example
+banded_example: LIBS = -llapack
 
 all: $(TARGETS)
 
-# --- Pattern Rules ---
+# --- Template Rules ---
 
 $(GEN_DIR)/%.f: $(TEMPLATE_DIR)/%.fpp
 	$(FYPP) $< $@
@@ -22,16 +29,22 @@ $(GEN_DIR)/%.f: $(TEMPLATE_DIR)/%.fpp
 $(GEN_DIR)/%.f90: $(TEMPLATE_DIR)/%.fpp
 	$(FYPP) $< $@
 
-# --- Build Rules ---
+# --- Merged Build Rule for Examples ---
 
-examples: banded_example bandfs_demo
+examples: $(EXAMPLES)
 
-banded_example: $(TARGETS) banded_example.f90
-	$(FC) $(FFLAGS) -I. -o $@ $^ -llapack
+$(EXAMPLES): %: $(TARGETS) %.f90
+	$(FC) $(FFLAGS) -I. -o $@ $^ $(LIBS)
 
-bandfs_demo: $(TARGETS) bandfs_demo.f90
-	$(FC) $(FFLAGS) -I. -o $@ $^
+# --- Distribution Rule ---
 
-.PHONY: clean
+dist: clean
+	mkdir -p $(DIST_NAME)
+	cp -r templates complex banded_example.f90 bandfs_demo.f90 bandfs.fi Makefile README.md $(DIST_NAME)/
+	tar -czvf $(DIST_NAME)-$(DATE).tar.gz $(DIST_NAME)
+	$(RM) -r $(DIST_NAME)
+
+.PHONY: clean dist
 clean:
-	$(RM) $(TARGETS) banded_example bandfs_demo
+	$(RM) $(TARGETS) $(EXAMPLES)
+	$(RM) *.tar.gz
