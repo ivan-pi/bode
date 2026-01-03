@@ -22,7 +22,7 @@ sub-folder.
   - [bandf](./README.md#bandf)
   - [bands](./README.md#bands)
   - [bndmv](./README.md#bndmv)
-* [Historical Note](./README.md#other)
+* [Historical Note](./README.md#historical-note)
 
 # Usage
 
@@ -179,7 +179,7 @@ Available as generic `bands` or specific names `sbands`/`dbands`.
 
 ## `bndmv()`
 
-Matrix-vector multiplication `y := beta y + alpha A x`
+Performs the matrix-vector operation, `y := alpha*A*x + beta*y`
 
 # Historical Note
 
