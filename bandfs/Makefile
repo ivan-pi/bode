@@ -1,32 +1,37 @@
-# Makefile for the templated Fortran procedures bandf and bands
-# Designed to be launched from the root project folder, e.g.
-#
-#   make -f bandfs/Makefile
-#
-
-FYPP=fypp
+FYPP = fypp
+FC = gfortran
+FFLAGS = -Wall -Og -g
 
 # Directory Definitions
-SRCDIR = src
-FPPDIR = bandfs
+TEMPLATE_DIR = templates
+GEN_DIR = .
 
-TARGETS = src/bandf.f src/bands.f
+# List of templates to be generated
+TARGET_NAMES = bandf.f bands.f bndmv.f90
+
+# Variable Expansion
+TARGETS = $(addprefix $(GEN_DIR)/, $(TARGET_NAMES))
 
 all: $(TARGETS)
 
-# The Generalized Pattern Rule
-$(SRCDIR)/%.f: $(FPPDIR)/%.fpp
+# --- Pattern Rules ---
+
+$(GEN_DIR)/%.f: $(TEMPLATE_DIR)/%.fpp
 	$(FYPP) $< $@
 
-FC=gfortran
-FFLAGS=-Wall
+$(GEN_DIR)/%.f90: $(TEMPLATE_DIR)/%.fpp
+	$(FYPP) $< $@
 
-banded_example: $(TARGETS) bandfs/banded_example.f90
-	$(FC) $(FFLAGS) -I$(CURDIR)/bandfs/ -o $@ $^ -llapack
+# --- Build Rules ---
 
-bandfs_demo: $(TARGETS) bandfs/bandfs_demo.f90
-	$(FC) $(FFLAGS) -I$(CURDIR)/bandfs/ -o $@ $^
+examples: banded_example bandfs_demo
+
+banded_example: $(TARGETS) banded_example.f90
+	$(FC) $(FFLAGS) -I. -o $@ $^ -llapack
+
+bandfs_demo: $(TARGETS) bandfs_demo.f90
+	$(FC) $(FFLAGS) -I. -o $@ $^
 
 .PHONY: clean
 clean:
-	$(RM) $(TARGETS)
+	$(RM) $(TARGETS) banded_example bandfs_demo
