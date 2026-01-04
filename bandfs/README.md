@@ -7,7 +7,7 @@ The procedures are adapted from the complex-type subroutines originally
 developed by:
 
 > Jeff Thorson, Gaussian elimination on a banded matrix, Stanford Exploration
-> Project: Report No. 20, October 1979
+> Project: Report No. 20, October 1979,
 > https://sep.stanford.edu/data/media/public/oldreports/sep20/20_11_abs.html
 
 The original complex routines can be found in the [`complex/`](./complex)
