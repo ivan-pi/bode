@@ -69,7 +69,7 @@ program bandfs_demo
 
   ! 3. Solve the system
   ! 'b' is overwritten with the solution vector 'x'
-  call bands(n, k, a, lda, ipiv, b)
+  call bands(n, k, a, lda, ipiv, b, info)
 
   write(*,'(A,/,*(2X,F6.3,:,/))') "Solution x:", b
 

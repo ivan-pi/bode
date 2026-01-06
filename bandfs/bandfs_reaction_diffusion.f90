@@ -61,7 +61,7 @@ program bandfs_reaction_diffusion
     if (info /= 0) stop "Error: Factorization failed."
 
     ! Solution vector x is returned in b
-    call bands(n, m, a, lda, ipiv, b)
+    call bands(n, m, a, lda, ipiv, b, info)
 
     ! 6. Output Results
     ! Uses an implied-DO list to print all pairs. 

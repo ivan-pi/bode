@@ -5,6 +5,10 @@ implicit none
 
 integer, parameter :: wp = kind(1.0d0)
 
+! BANDFS procedure interfaces
+! N.b. these only work on structurally symmetric banded matrices
+include "bandfs.fi"
+
 ! Constants
 integer, parameter :: n = 5
 integer, parameter :: ml = 1, mu = 2
@@ -13,20 +17,13 @@ integer, parameter :: bw = 2*m1 + 1
 
 ! Dense matrix and vectors
 real(wp) :: ad(n,n), b(n), xla(n), xsl(n)
-real(wp) :: wrk(n)
-integer :: ipiv(n)
+integer :: ipiv(n), info
 
 ! SLATEC format (extra columns needed for pivoting)
 real(wp) :: as(n,bw+m1)
-integer :: itask, ind
 
 ! LAPACK format (additional ml rows needed by factorization)
 real(wp) :: ab(bw+m1,n)
-integer :: info
-
-! BANDFS procedure interfaces
-! N.b. these only work on structurally symmetric banded matrices
-include "bandfs.fi"
 
 ! Dense matrix
 ad(1,:) = [1, 2, 3, 0, 0]
@@ -69,7 +66,7 @@ if (info /= 0) then
    write(*,'("bandf failed with info = ",I0)') info
    error stop
 end if
-call bands(n,bw,as,size(as,1),ipiv,xsl)
+call bands(n,bw,as,size(as,1),ipiv,xsl,info)
 write(*,'(A,*(/,G0))') "BANDFS: x = ", xsl
 
 contains

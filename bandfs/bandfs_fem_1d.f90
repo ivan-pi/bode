@@ -69,7 +69,7 @@ program bandfs_fem_1d
   call bandf(n, m, a, lda, ipiv, info)
   if (info /= 0) stop "Factorization error: Matrix is singular."
 
-  call bands(n, m, a, lda, ipiv, b)
+  call bands(n, m, a, lda, ipiv, b, info)
 
   ! 6. Results - Using implied-DO loop and format repetition
   write(*,'("# n=", I0, " phi=", F8.3)') n, phi
