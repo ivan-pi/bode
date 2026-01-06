@@ -64,12 +64,12 @@ write(*,'(A,*(/,G0))') "LAPACK: x = ", xla
 !
 
 xsl = b
-call bandf(as,bw,n,ipiv,info)
+call bandf(n,bw,as,size(as,1),ipiv,info)
 if (info /= 0) then
    write(*,'("bandf failed with info = ",I0)') info
    error stop
 end if
-call bands(as,xsl,bw,n,ipiv)
+call bands(n,bw,as,size(as,1),ipiv,xsl)
 write(*,'(A,*(/,G0))') "BANDFS: x = ", xsl
 
 contains

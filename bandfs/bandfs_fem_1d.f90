@@ -7,7 +7,7 @@ program bandfs_fem_1d
   include "bandfs.fi"
 
   ! Simulation parameters
-  integer :: n = 50, nel, info, i, argc
+  integer :: n = 50, lda, nel, info, i, argc
   integer, parameter :: m = 3           ! Bandwidth (tridiagonal)
   integer, parameter :: h = (m-1)/2     ! Half-bandwidth
   real(wp) :: phi = 1.0_wp, L, dx
@@ -36,7 +36,8 @@ program bandfs_fem_1d
   L   = 1.0_wp
   dx  = L / real(nel, wp)
 
-  allocate(a(n, -h:h+h), b(n), ipiv(n))
+  lda = n
+  allocate(a(lda, -h:h+h), b(n), ipiv(n))
   a = 0.0_wp
   b = 0.0_wp
 
@@ -65,10 +66,10 @@ program bandfs_fem_1d
   b(n)      = 1.0_wp  ! Target value
 
   ! 5. Solver Stage
-  call bandf(a, m, n, ipiv, info)
+  call bandf(n, m, a, lda, ipiv, info)
   if (info /= 0) stop "Factorization error: Matrix is singular."
 
-  call bands(a, b, m, n, ipiv)
+  call bands(n, m, a, lda, ipiv, b)
 
   ! 6. Results - Using implied-DO loop and format repetition
   write(*,'("# n=", I0, " phi=", F8.3)') n, phi

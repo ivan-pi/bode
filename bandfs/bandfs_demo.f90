@@ -10,8 +10,10 @@ program bandfs_demo
   integer, parameter :: h = (m-1)/2   ! Half-bandwidth
   
   ! Array storage
-  real(wp) :: a(n,-h:h+h), b(n)
+  integer, parameter :: lda = n
+  real(wp) :: a(lda,-h:h+h), b(n)
   integer  :: ipiv(n), info
+
 
   ! 1. Initialize array and RHS
   ! Gilbert Strang's favorite matrix (second order differences)
@@ -24,7 +26,7 @@ program bandfs_demo
 
   ! 2. Perform LU Factorization
   ! 'a' is modified in-place; 'ipiv' stores pivoting sequence
-  call bandf(a, m, n, ipiv, info)
+  call bandf(n, m, a, lda, ipiv, info)
 
   if (info /= 0) then
      write(*,'(A)') "Error: Matrix is singular or factorization failed."
@@ -33,7 +35,7 @@ program bandfs_demo
 
   ! 3. Solve the system
   ! 'b' is overwritten with the solution vector 'x'
-  call bands(a, b, m, n, ipiv)
+  call bands(n, m, a, lda, ipiv, b)
 
   write(*,'(A,/,*(2X,F6.3,:,/))') "Solution x:", b
 

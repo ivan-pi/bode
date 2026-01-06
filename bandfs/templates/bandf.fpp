@@ -30,16 +30,16 @@ c     which is used by subroutine ${c}$bands'. The
 c     horizontal dimension of 'a' must be at least
 c     m + (m-1)/2 : the extra (m-1)/2 superdiagonals
 c     of A provide space for the interchanged rows. On
-c     normal exit, ifail is zero. If a very small pivot
-c     is encountered, ifail > 0, or ifail
+c     normal exit, info is zero. If a very small pivot
+c     is encountered, info > 0, or info
 c     zero. Small pivots indicate a near singular matrix.
 c     ---------------------------------------------------
-      subroutine ${c}$bandf(a,m,n,p,ifail)
+      subroutine ${c}$bandf(n,m,a,lda,p,info)
       integer, parameter :: rk = kind(${lit}$)
-      integer, intent(in) :: m, n
-      real(kind=rk), intent(inout) :: a(n,*)
+      integer, intent(in) :: n, m, lda
+      real(kind=rk), intent(inout) :: a(lda,*)
       integer, intent(out) :: p(n)
-      integer, intent(out) :: ifail
+      integer, intent(out) :: info
 
       real(kind=rk), parameter :: zero = 0
       real(kind=rk), parameter :: one = 1
@@ -50,7 +50,22 @@ c     ---------------------------------------------------
       integer :: g, h, i, j, k, r
       real(kind=rk) :: c, max, d
 
-      ifail = 0
+c     Test the input parameters
+      info = 0
+      if (n < 0) then
+         info = -1
+      else if (m < 0) then
+         info = -2
+      else if (lda < n) then
+         info = -4
+      end if
+
+      if (info /= 0) return
+
+      ! Early return
+      if (n == 0) return
+      if (m == 0) return
+
       r = (m+1)/2
       do 10 i = 1,n
       do 11 j = m+1,m+r-1
@@ -113,7 +128,7 @@ c
 c
 c     the matrix is singular
 c
-   99 ifail = k
+   99 info = k
       return
       end
 #:endfor

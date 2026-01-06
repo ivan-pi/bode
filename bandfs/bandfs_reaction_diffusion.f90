@@ -11,7 +11,7 @@ program bandfs_reaction_diffusion
     integer, allocatable  :: ipiv(:)
 
     ! Simulation parameters
-    integer :: n = 50, info, i, argc
+    integer :: n = 50, lda, info, i, argc
     real(wp) :: phi = 1.0_wp, dx
     character(len=32) :: arg
 
@@ -30,6 +30,7 @@ program bandfs_reaction_diffusion
     ! 2. Allocation
     ! a(n, -1:2) provides space for tridiagonal + pivoting fill-in
     allocate(a(n, -h:h+h), b(n), ipiv(n))
+    lda = n
     
     dx = 1.0_wp / real(n-1, wp)
     a = 0.0_wp
@@ -56,11 +57,11 @@ program bandfs_reaction_diffusion
     b(n)     =  1.0_wp
 
     ! 5. LU Factorization and Solve
-    call bandf(a, m, n, ipiv, info)
+    call bandf(n, m, a, lda, ipiv, info)
     if (info /= 0) stop "Error: Factorization failed."
 
     ! Solution vector x is returned in b
-    call bands(a, b, m, n, ipiv)
+    call bands(n, m, a, lda, ipiv, b)
 
     ! 6. Output Results
     ! Uses an implied-DO list to print all pairs. 
