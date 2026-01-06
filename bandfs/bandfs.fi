@@ -1,4 +1,29 @@
 
+interface bndmv
+   subroutine sbndmv(n, kl, ku, alpha, a, lda, x, beta, y)
+      integer, parameter :: sp = kind(1.0e0)
+      integer,  intent(in)    :: n
+      integer,  intent(in)    :: kl, ku
+      real(sp), intent(in)    :: alpha
+      integer,  intent(in)    :: lda
+      real(sp), intent(in)    :: a(lda,-kl:ku)
+      real(sp), intent(in)    :: x(n)
+      real(sp), intent(in)    :: beta
+      real(sp), intent(inout) :: y(n)
+   end subroutine
+   subroutine dbndmv(n, kl, ku, alpha, a, lda, x, beta, y)
+      integer, parameter :: dp = kind(1.0d0)
+      integer,  intent(in)    :: n
+      integer,  intent(in)    :: kl, ku
+      real(dp), intent(in)    :: alpha
+      integer,  intent(in)    :: lda
+      real(dp), intent(in)    :: a(lda,-kl:ku)
+      real(dp), intent(in)    :: x(n)
+      real(dp), intent(in)    :: beta
+      real(dp), intent(inout) :: y(n)
+   end subroutine
+end interface
+
 interface bandf
    subroutine sbandf(n,k,a,lda,ipiv,info)
       integer, parameter :: sp = kind(1.0e0)
