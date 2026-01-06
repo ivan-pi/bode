@@ -29,7 +29,7 @@ sub-folder.
 The following program demonstrates how to solve a 5 × 5 tridiagonal system
 using the procedured `bandf` and `bands`.
 Note how the custom arrays bounds are used to center the matrix in column 0.
-The array is padded with `h = (m-1)/2` columns necessary for pivoting.
+The array is padded with `kh = (k-1)/2` columns necessary for pivoting.
 
 ```fortran
 program bandfs_demo
@@ -41,11 +41,12 @@ program bandfs_demo
   ! BANDFS procedure interfaces
   include "bandfs.fi"
 
-  integer, parameter :: n = 5, m = 3  ! Dimension and bandwidth
-  integer, parameter :: h = (m-1)/2   ! Half-bandwidth
+  integer, parameter :: n = 5, k = 3  ! Dimension and bandwidth
+  integer, parameter :: kh = (k-1)/2   ! Half-bandwidth
 
   ! Array storage
-  real(wp) :: a(n,-h:h+h), b(n)
+  integer, parameter :: lda = n
+  real(wp) :: a(lda,-kh:kh+kh), b(n)
   integer  :: ipiv(n), info
 
   ! Gilbert Strang's favorite matrix (second order differences)
@@ -58,7 +59,7 @@ program bandfs_demo
 
   ! 1. Perform LU Factorization
   ! 'a' is modified in-place; 'ipiv' stores pivoting sequence
-  call bandf(a, m, n, ipiv, info)
+  call bandf(n, k, a, lda, ipiv, info)
 
   if (info /= 0) then
      write(*,'(A)') "Error: Matrix is singular or factorization failed."
@@ -67,7 +68,7 @@ program bandfs_demo
 
   ! 2. Solve the system
   ! 'b' is overwritten with the solution vector 'x'
-  call bands(a, b, m, n, ipiv)
+  call bands(n, k, a, lda, ipiv, b)
 
   write(*,'(A,/,*(2X,F6.3,:,/))') "Solution x:", b
 
@@ -78,20 +79,20 @@ end program
 
 ## Banded Storage
 
-The diagonals of matrix $A$ are stored in array `A(1:n,1:m)` where `n`
-is the dimension of the system and `m` is the bandwidth (`m` must be odd).
+The diagonals of matrix $A$ are stored in array `A(1:n,1:k)` where `n`
+is the dimension of the system and `k` is the bandwidth (`k` must be odd).
 
 The matrix is stored in row-wise manner, with the diagonals of matrix $A$
 loaded into columns of array `A`. Thus, element $A_{ij}$ is to be loaded
-into element `A(i,j-i+(m-1)/2)`. **Note:** this row-wise storage order differs
+into element `A(i,j-i+(k-1)/2)`. **Note:** this row-wise storage order differs
 from the column-wise format used in the LINPACK and LAPACK libraries.
 
 The procedures `bandf` and `bands` are limited to _structurally_ symmetric
 banded matrices,where the number of lower and upper diagonals are equal:
-`ml = mu = (m-1)/2`.
+`kl = ku = (k-1)/2`.
 
 Due to the fill-in during factorization, the second dimension of `A` must
-be at least `m + (m-1)/2`. The extra `(m-1)/2` columns of padding provide
+be at least `k + (k-1)/2`. The extra `(k-1)/2` columns of padding provide
 workspace for the interchanged rows during pivoting.
 
 The same storage scheme is used by the SLATEC library procedures [`dnbfa`](https://netlib.org/slatec/src/dnbfa.f)/[`dnbsl`](https://netlib.org/slatec/src/dnbsl.f),
@@ -107,7 +108,7 @@ tohugh SLATEC does not impose symmetry restrictions.
  0  0 43 44 45
  0  0  0 54 55
 ```
-then `n = 5`, `m = 3`, and the array `A` should contain
+then `n = 5`, `k = 3`, and the array `A` should contain
 ```
  * 11 12 +     , * = not used
 21 22 23 +     , + = used for pivoting
@@ -125,7 +126,7 @@ then `n = 5`, `m = 3`, and the array `A` should contain
  0  0  0 54 55 56
  0  0  0 64 65 66
 ```
-then `n = 6`, `m = 5`, and the array `A` should contain
+then `n = 6`, `k = 5`, and the array `A` should contain
 ```
  *  * 11 12 13  +  +      , * = not used
  * 21 22 23 24  +  +      , + = used for pivoting
@@ -140,19 +141,20 @@ then `n = 6`, `m = 5`, and the array `A` should contain
 Banded LU factorization with partial pivoting
 
 ```fortran
-subroutine bandf(a,m,n,p,ifail)
-  integer, intent(in) :: m, n
-  real(kind=[sp,dp]), intent(inout) :: a(n,*)
+subroutine bandf(n,k,a,lda,ipiv,info)
+  integer, intent(in) :: n, k, lda
+  real(kind=[sp,dp]), intent(inout) :: a(lda,*)
   integer, intent(out) :: p(n)
-  integer, intent(out) :: ifail
+  integer, intent(out) :: info
 ```
 
 Arguments:
-* `a`: The values of the banded matrix. The second dimension must be at least `m + (m-1)/2`. On output contains the factorized matrix.
-* `m`: The full bandwidth of the matrix (total number of diagonals).
-* `n`: The dimension of the system (number of rows).
-* `p`: Output array of pivot indices.
-* `ifail`: Error flag (0 on success, non-zero if the matrix is singular).
+* `n`: The dimension of the system (number of rows/columns).
+* `k`: The full bandwidth of the matrix (total number of diagonals).
+* `a`: The values of the banded matrix. The second dimension must be at least `k + (k-1)/2`. On output contains the factorized matrix.
+* `lda`: Leading dimension of array `a`. `lda >= n`.
+* `ipiv`: The pivot indices.
+* `info`: Error flag (0 on success, non-zero if the matrix is singular).
 
 Available as generic `bandf` or specific names `sbandf`/`dbandf`.
 
@@ -161,19 +163,20 @@ Available as generic `bandf` or specific names `sbandf`/`dbandf`.
 Solve the banded system $Ax = b$ using the factorization generated by `bandf`.
 
 ```fortran
-subroutine bands(a,b,m,n,p)
-   integer, intent(in) :: m, n
-   real(kind=[sp,dp]), intent(in) :: a(n,*)
+subroutine bands(n,k,a,lda,ipiv)
+   integer, intent(in) :: n, k, lda
+   real(kind=[sp,dp]), intent(in) :: a(lda,*)
+   integer, intent(in) :: ipiv(n)
    real(kind=[sp,dp]), intent(inout) :: b(n)
-   integer, intent(in) :: p(n)
 ```
 
 Dummy arguments:
-- `a`: The factorized matrix returned by `bandf`.
-- `b`: Upon entry, the right-hand side. Upon exit, the solution vector $x$.
-- `m`: The full bandwidth of the matrix (total number of diagonals).
 - `n`: The dimension of the system (number of rows).
-- `p`: Array of pivot indices from `bandf`.
+- `k`: The full bandwidth of the matrix (total number of diagonals).
+- `a`: The factorized matrix returned by `bandf`.
+- `lda`: Leading dimension of the array `a`. `lda >= n`.
+- `ipiv`: Array of pivot indices from `bandf`.
+- `b`: Upon entry, the right-hand side. Upon exit, the solution vector $x$.
 
 Available as generic `bands` or specific names `sbands`/`dbands`.
 
