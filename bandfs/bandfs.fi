@@ -17,18 +17,20 @@ interface bandf
 end interface
 
 interface bands
-   subroutine sbands(n,k,a,lda,ipiv,b)
+   subroutine sbands(n,k,a,lda,ipiv,b,info)
       integer, parameter :: sp = kind(1.0e0)
       integer, intent(in) :: n, k, lda
       real(sp), intent(in) :: a(lda,*)
       integer, intent(in) :: ipiv(n)
       real(sp), intent(inout) :: b(n)
+      integer, intent(out) :: info
    end subroutine
-   subroutine dbands(n,k,a,lda,ipiv,b)
+   subroutine dbands(n,k,a,lda,ipiv,b,info)
       integer, parameter :: dp = kind(1.0d0)
       integer, intent(in) :: n, k, lda
       real(dp), intent(in) :: a(lda,*)
       integer, intent(in) :: ipiv(n)
       real(dp), intent(inout) :: b(n)
+      integer, intent(out) :: info
    end subroutine
 end interface
