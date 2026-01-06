@@ -20,7 +20,7 @@ EXAMPLES = banded_example bandfs_demo bandfs_reaction_diffusion \
 # This appends -llapack only when building banded_example
 banded_example: LIBS = -llapack
 
-all: generate
+all: examples
 
 .PHONY: generate
 generate: $(TARGETS)
@@ -50,5 +50,5 @@ dist: clean
 
 .PHONY: clean dist
 clean:
-	$(RM) $(TARGETS) $(EXAMPLES)
+	$(RM) $(EXAMPLES)
 	$(RM) *.tar.gz
