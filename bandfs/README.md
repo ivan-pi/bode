@@ -35,8 +35,7 @@ The array is padded with `kh = (k-1)/2` columns necessary for pivoting.
 program bandfs_demo
   implicit none
 
-  ! Select work precision
-  integer, parameter :: wp = kind(1.0d0)
+  integer, parameter :: wp = kind(1.0d0) ! Double precision
 
   ! BANDFS procedure interfaces
   include "bandfs.fi"
@@ -49,6 +48,8 @@ program bandfs_demo
   real(wp) :: a(lda,-kh:kh+kh), b(n)
   integer  :: ipiv(n), info
 
+
+  ! 1. Initialize array and RHS
   ! Gilbert Strang's favorite matrix (second order differences)
   a(:,-1) = [ 0,-1,-1,-1,-1]  ! Lower diagonal
   a(:, 0) = [ 2, 2, 2, 2, 2]  ! Main diagonal
@@ -57,7 +58,7 @@ program bandfs_demo
   ! Right-hand side for a target solution of x = [1, 2, 3, 4, 5]
   b = [ 0, 0, 0, 0, 6]
 
-  ! 1. Perform LU Factorization
+  ! 2. Perform LU Factorization
   ! 'a' is modified in-place; 'ipiv' stores pivoting sequence
   call bandf(n, k, a, lda, ipiv, info)
 
@@ -66,7 +67,7 @@ program bandfs_demo
      stop 1
   end if
 
-  ! 2. Solve the system
+  ! 3. Solve the system
   ! 'b' is overwritten with the solution vector 'x'
   call bands(n, k, a, lda, ipiv, b)
 
