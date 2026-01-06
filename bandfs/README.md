@@ -97,7 +97,8 @@ be at least `k + (k-1)/2`. The extra `(k-1)/2` columns of padding provide
 workspace for the interchanged rows during pivoting.
 
 The same storage scheme is used by the SLATEC library procedures [`dnbfa`](https://netlib.org/slatec/src/dnbfa.f)/[`dnbsl`](https://netlib.org/slatec/src/dnbsl.f),
-tohugh SLATEC does not impose symmetry restrictions.
+however the SLATEC procedures do not impose any symmetry restrictions.
+(In theory, the procedures introduced below could just wrap the SLATEC procedures.)
 
 ### Examples
 
