@@ -172,7 +172,7 @@ subroutine bands(n,k,a,lda,ipiv,info)
    integer, intent(out) :: info
 ```
 
-Dummy arguments:
+Arguments:
 - `n`: The dimension of the system (number of rows).
 - `k`: The full bandwidth of the matrix (total number of diagonals).
 - `a`: The factorized matrix returned by `bandf`.
@@ -186,6 +186,31 @@ Available as generic `bands` or specific names `sbands`/`dbands`.
 ## `bndmv()`
 
 Performs the matrix-vector operation, `y := alpha*A*x + beta*y`
+
+```fortran
+ subroutine bndmv(n, kl, ku, alpha, a, lda, x, beta, y)
+    integer,  intent(in)    :: n
+    integer,  intent(in)    :: kl, ku
+    real(kind=[sp,dp]), intent(in)    :: alpha
+    integer,  intent(in)    :: lda
+    real(kind=[sp,dp]), intent(in)    :: a(lda,-kl:ku)
+    real(kind=[sp,dp]), intent(in)    :: x(n)
+    real(kind=[sp,dp]), intent(in)    :: beta
+    real(kind=[sp,dp]), intent(inout) :: y(n)
+```
+
+Arguments:
+- `n`: The number of rows/columns of the matrix `A`. `N >= 0`.
+- `kl`: The number of sub-diagonals of the matrix `A`. `KL >= 0`.
+- `ku`: The number of super-diagonals of the matrix `A`. `KU >= 0`.
+- `alpha`: The scalar alpha.
+- `a`: The banded matrix in column storage.
+- `lda`: The first dimension of `a` as declaring in the calling (sub)program. `LDA >= N`.
+- `x`: The vector x.
+- `beta`: The scalar beta.
+- `y`: The vector y.
+
+Avaialble as generic `bands` or specific names `sbndmv`/`dbndmv`.
 
 # Historical Note
 
