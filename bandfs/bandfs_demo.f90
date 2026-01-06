@@ -6,12 +6,12 @@ program bandfs_demo
   ! BANDFS procedure interfaces
   include "bandfs.fi"
 
-  integer, parameter :: n = 5, m = 3  ! Dimension and bandwidth
-  integer, parameter :: h = (m-1)/2   ! Half-bandwidth
+  integer, parameter :: n = 5, k = 3  ! Dimension and bandwidth
+  integer, parameter :: kh = (k-1)/2   ! Half-bandwidth
   
   ! Array storage
   integer, parameter :: lda = n
-  real(wp) :: a(lda,-h:h+h), b(n)
+  real(wp) :: a(lda,-kh:kh+kh), b(n)
   integer  :: ipiv(n), info
 
 
@@ -26,7 +26,7 @@ program bandfs_demo
 
   ! 2. Perform LU Factorization
   ! 'a' is modified in-place; 'ipiv' stores pivoting sequence
-  call bandf(n, m, a, lda, ipiv, info)
+  call bandf(n, k, a, lda, ipiv, info)
 
   if (info /= 0) then
      write(*,'(A)') "Error: Matrix is singular or factorization failed."
@@ -35,7 +35,7 @@ program bandfs_demo
 
   ! 3. Solve the system
   ! 'b' is overwritten with the solution vector 'x'
-  call bands(n, m, a, lda, ipiv, b)
+  call bands(n, k, a, lda, ipiv, b)
 
   write(*,'(A,/,*(2X,F6.3,:,/))') "Solution x:", b
 
