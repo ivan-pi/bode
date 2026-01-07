@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# === macOS Noise ===
+.DS_Store
+*.dSYM/
+.LSOverride
