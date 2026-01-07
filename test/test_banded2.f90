@@ -40,9 +40,9 @@ contains
 
     ! Reaction-Diffusion Example 1
     ! Uses backward difference (first order) for the Neumann BC
-    subroutine setup1(n, ab, b)
-        integer, intent(in) :: n
-        real(wp), intent(out) :: ab(n,3)
+    subroutine setup1(n, ab, ldab, b)
+        integer, intent(in) :: n, ldab
+        real(wp), intent(out) :: ab(ldab,3)
         real(wp), intent(out) :: b(n)
 
         real(wp) :: h, diff, reac
@@ -76,9 +76,9 @@ contains
 
     ! Reaction-Diffusion Example 2
     ! Uses central difference (via ghost node) for the Neumann BC
-    subroutine setup2(n, ab, b)
-        integer, intent(in) :: n
-        real(wp), intent(out) :: ab(n,3)
+    subroutine setup2(n, ab, ldab, b)
+        integer, intent(in) :: n, ldab
+        real(wp), intent(out) :: ab(ldab,3)
         real(wp), intent(out) :: b(n)
 
         real(wp) :: h, diff, reac
@@ -111,15 +111,15 @@ contains
 
     ! Reaction-Diffusion Example 3
     ! Uses backward difference (second order) for the Neumann BC
-    subroutine setup3(n, ab, b)
-        integer, intent(in) :: n
-        real(wp), intent(out) :: ab(n,-2:2)
+    subroutine setup3(n, ab, ldab, b)
+        integer, intent(in) :: n, ldab
+        real(wp), intent(out) :: ab(ldab,-2:2)
         real(wp), intent(out) :: b(n)
 
         real(wp) :: h, diff, reac
 
+        ab = 0.0_wp
         b = 0.0_wp
-        b(1) = 1.0_wp ! Dirichlet boundary condition
 
         ! stepsize, diffusivity and reaction coefficient
         h = 1.0_wp/real(n-1,wp)
@@ -127,16 +127,18 @@ contains
         reac = 1.0_wp
 
         ! Fill tridiagonal parts for all internal nodes
-        ab(:, -1) = diff
-        ab(:,  0) = -2.0_wp * diff - h**2 * reac
-        ab(:,  1) = diff
+        ab(1:n, -1) = diff
+        ab(1:n,  0) = -2.0_wp * diff - h**2 * reac
+        ab(1:n,  1) = diff
 
-        ! Row 1: Dirichlet
-        ab(1, 0) = 1.0_wp
+        ! Note: the diagonals -2 and 2 are set above
+
+        ! Row 1: Dirichlet boundary
+        ab(1,0:2) = [1.0_wp, 0.0_wp, 0.0_wp]
         b(1)     = 1.0_wp
 
-        ! Row n: 2nd-order Backward Neumann
-        ab(n, -2:0) = [1.0_wp, -4.0_wp, 3.0_wp] / 2.0_wp
+        ! Row n: Neumann boundary, backward differences (second order)
+        ab(n, -2:0) = [1.0_wp, -4.0_wp, 3.0_wp]
 
     end subroutine
 
@@ -162,28 +164,28 @@ real(wp), allocatable :: ab(:,:), b(:), x(:), c(:)
 integer, allocatable :: ipiv(:)
 
 real(wp) :: h
-integer :: kh, lda, info, i, icase
+integer :: kh, ldab, info, i, icase
 
 ! Setup reaction-diffusion equation
 !call setup2(n, ab, b)
 
 icase = 3
-lda = n
+ldab = n
 allocate(b(n), x(n), c(n), ipiv(n))
 
 select case(icase)
 case(1)
     kh = 1
-    allocate(ab(lda,-kh:kh))
-    call setup1(n, ab, b)
+    allocate(ab(ldab,-kh:kh))
+    call setup1(n, ab, ldab, b)
 case(2)
     kh = 1
-    allocate(ab(lda,-kh:kh))
-    call setup2(n, ab, b)
+    allocate(ab(ldab,-kh:kh))
+    call setup2(n, ab, ldab, b)
 case(3)
     kh = 2
-    allocate(ab(lda,-kh:kh))
-    call setup3(n, ab, b)
+    allocate(ab(ldab,-kh:kh))
+    call setup3(n, ab, ldab, b)
 case default
     error stop "Invalid case"
 end select
@@ -194,7 +196,7 @@ do i = 1, n
 end do
 
 ! General banded matrix driver
-call solve_banded(n,kh,ab,lda,ipiv,b,info)
+call solve_banded(n,kh,ab,ldab,ipiv,b,info)
 print *, "# factor and solve info = ", info
 
 do i = 1, n
