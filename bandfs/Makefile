@@ -38,7 +38,7 @@ $(GEN_DIR)/%.f90: $(TEMPLATE_DIR)/%.fpp
 examples: $(EXAMPLES)
 
 $(EXAMPLES): %: $(TARGETS) %.f90
-	$(FC) $(FFLAGS) -I. -o $@ $^ $(LIBS)
+	$(FC) $(FFLAGS) -I./include -o $@ $^ $(LIBS)
 
 # --- Distribution Rule ---
 
