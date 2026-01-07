@@ -34,6 +34,7 @@ c     is encountered, info > 0, or info
 c     zero. Small pivots indicate a near singular matrix.
 c     ---------------------------------------------------
       subroutine sbandf(n,m,a,lda,p,info)
+      implicit none
       integer, parameter :: rk = kind(1.0e0)
       integer, intent(in) :: n, m, lda
       real(kind=rk), intent(inout) :: a(lda,*)
@@ -130,6 +131,7 @@ c
    99 info = k
       return
       end
+c
 c     ---------------------------------------------------
 c     Subroutine dbandf -- Partial pivoting version
 c
@@ -166,6 +168,7 @@ c     is encountered, info > 0, or info
 c     zero. Small pivots indicate a near singular matrix.
 c     ---------------------------------------------------
       subroutine dbandf(n,m,a,lda,p,info)
+      implicit none
       integer, parameter :: rk = kind(1.0d0)
       integer, intent(in) :: n, m, lda
       real(kind=rk), intent(inout) :: a(lda,*)
@@ -262,3 +265,4 @@ c
    99 info = k
       return
       end
+c

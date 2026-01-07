@@ -66,6 +66,7 @@ c
   120 continue
       return
       end
+c
 c     ---------------------------------------------------
 c     Subroutine dbands -- Partial pivoting version
 c
@@ -134,3 +135,4 @@ c
   120 continue
       return
       end
+c

@@ -9,7 +9,7 @@ DIST_NAME = bandfs
 DATE = $(shell date +%Y-%m-%d)
 
 # Generated Files
-TARGET_NAMES = bandf.f bands.f bndmv.f90
+TARGET_NAMES = bandf.f bands.f bndmv.f90 bndsl.f90
 TARGETS = $(addprefix $(GEN_DIR)/, $(TARGET_NAMES))
 
 # Example Programs

@@ -35,6 +35,7 @@ c     is encountered, info > 0, or info
 c     zero. Small pivots indicate a near singular matrix.
 c     ---------------------------------------------------
       subroutine ${c}$bandf(n,m,a,lda,p,info)
+      implicit none
       integer, parameter :: rk = kind(${lit}$)
       integer, intent(in) :: n, m, lda
       real(kind=rk), intent(inout) :: a(lda,*)
@@ -131,4 +132,5 @@ c
    99 info = k
       return
       end
+c
 #:endfor
