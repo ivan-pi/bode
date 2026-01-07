@@ -17,18 +17,18 @@ contains
         m21 = 2*m1+1  ! total bandwidth
         m3 = m1    ! extra needed for factorization
 
-        print *, "m1  = ", m1
-        print *, "m21 = ", m21
-        print *, "m3  = ", m3
-        
-        tl = -66
+!        print *, "m1  = ", m1
+!        print *, "m21 = ", m21
+!        print *, "m3  = ", m3
+!        tl = -66
+
         call ltri(a,tl,lda,n,ipiv,m21,m1,m3,ifail)
         if (ifail /= 0) return
 
-        print *, "FACTORIZATION"
-        do i = 1, n
-            print *, "tl(i,:) = ", tl(i,:), "|", ipiv(i)
-        end do
+!        print *, "FACTORIZATION"
+!        do i = 1, n
+!            print *, "tl(i,:) = ", tl(i,:), "|", ipiv(i)
+!        end do
 
         ! Copy input values
         x(1:n) = b(1:n)
@@ -152,66 +152,120 @@ contains
 end module
 
 program test_banded2
+    use bode_mod, only: wp
+    use diff_mod, only: setup1, setup2, setup3, solve_banded, sol
+    implicit none
 
-use bode_mod, only: wp
-use diff_mod, only: setup1, setup2, setup3, solve_banded, sol
+    ! External procedure inclusion
+    include 'bandfs.fi'
 
-implicit none
+    ! --- Configuration ---
+    integer :: n, icase
+    logical, parameter :: verbose = .false.
 
-integer :: n = 10
+    real(wp), allocatable :: ab(:,:), b(:), x(:), c(:), res(:)
+    real(wp), allocatable :: ab_orig(:,:), b_orig(:)
+    integer, allocatable  :: ipiv(:)
 
-real(wp), allocatable :: ab(:,:), b(:), x(:), c(:)
-integer, allocatable :: ipiv(:)
+    real(wp) :: h, l2_err
+    integer  :: kh, ldab, info, i
+    character(len=32) :: arg
 
-real(wp) :: h
-integer :: kh, ldab, info, i, icase
+    ! --- Command Line Parsing ---
+    if (command_argument_count() /= 2) then
+        print *, "Usage: ./test_banded2 <icase> <n>"
+        print *, "  icase : 1 (1st order), 2 (Central/Ghost), 3 (2nd order backward)"
+        print *, "  n     : Number of nodes"
+        stop 1
+    end if
 
-! Setup reaction-diffusion equation
-!call setup2(n, ab, b)
+    ! Get Case (Argument 1)
+    call get_command_argument(1, arg)
+    read(arg, *) icase
 
-icase = 3
-ldab = n
-allocate(b(n), x(n), c(n), ipiv(n))
+    ! Get N (Argument 2)
+    call get_command_argument(2, arg)
+    read(arg, *) n
 
-select case(icase)
-case(1)
-    kh = 1
-    allocate(ab(ldab,-kh:kh))
-    call setup1(n, ab, ldab, b)
-case(2)
-    kh = 1
-    allocate(ab(ldab,-kh:kh))
-    call setup2(n, ab, ldab, b)
-case(3)
-    kh = 2
-    allocate(ab(ldab,-kh:kh))
-    call setup3(n, ab, ldab, b)
-case default
-    error stop "Invalid case"
-end select
+    ! --- Status Message ---
+    write(*, '(">>> Running Case ", I0, " with ", I0, " nodes.")') icase, n
+    select case(icase)
+    case(1)
+        write(*,'(4X,A)') "Mode: 1st Order Backward Difference Neumann BC"
+    case(2)
+        write(*,'(4X,A)') "Mode: 2nd Order Central Difference (Ghost Node) Neumann BC"
+    case(3)
+        write(*,'(4X,A)') "Mode: 2nd Order Backward Difference Neumann BC"
+    case default
+        error stop "Invalid case selection. Choose 1, 2, or 3."
+    end select
 
-print *, "ab = "
-do i = 1, n
-    print *, ab(i,:), "|", b(i)
-end do
+    ldab = n
+    allocate(b(n), x(n), c(n), res(n), ipiv(n), b_orig(n))
 
-! General banded matrix driver
-call solve_banded(n,kh,ab,ldab,ipiv,b,info)
-print *, "# factor and solve info = ", info
+    ! --- Setup Phase ---
+    select case(icase)
+    case(1)
+        kh = 1
+        allocate(ab(ldab,-kh:kh))
+        call setup1(n, ab, ldab, b)
+    case(2)
+        kh = 1
+        allocate(ab(ldab,-kh:kh))
+        call setup2(n, ab, ldab, b)
+    case(3)
+        kh = 2
+        allocate(ab(ldab,-kh:kh))
+        call setup3(n, ab, ldab, b)
+    end select
 
-do i = 1, n
-    print *, ab(i,:), "|", b(i) , "|", ipiv(i)
-end do
+    ! Backup for validation (residuals)
+    allocate(ab_orig, source=ab)
+    b_orig = b
 
+    if (verbose) call print_debug()
 
-h = 1.0_wp / real(n-1,wp)
+    ! --- Linear Solve ---
+    call solve_banded(n, kh, ab, ldab, ipiv, b, info)
 
-x = [((i-1)*h,i=1,n)]
-c = sol(x,Th=1.0_wp)
+    ! Early exit on solver failure
+    if (info /= 0) then
+        write(*, '(A, I0)') "Error: solve_banded failed with info = ", info
+        stop 1
+    end if
 
-print *, "SOLUTION"
-do i = 1, n
-    print *, x(i), c(i), b(i)
-end do
+    ! --- Post-Processing ---
 
-end program
+    ! 1. Calculate Residuals: res = b_orig - 1.0 * A * b_sol
+    res = b_orig
+    call bndmv(n, kh, kh, -1.0_wp, ab_orig, ldab, b, 1.0_wp, res)
+
+    ! 2. Calculate L2 Error Norm
+    h = 1.0_wp / real(n-1, wp)
+    x = [((i-1)*h, i=1, n)]
+    c = sol(x, Th=1.0_wp)
+
+    ! L2 Error: ||numerical - analytical||
+    l2_err = norm2(b - c)
+
+    print *, "-----------------------------------------------------------"
+    print *, "FINAL SOLUTION AND RESIDUALS"
+    print *, "   x      Analytical      Numerical        Residual"
+    do i = 1, n
+        print "(F6.3, 2F16.10, E16.6)", x(i), c(i), b(i), res(i)
+    end do
+    print *, "-----------------------------------------------------------"
+    print "(A, E12.6)", " L2 Error Norm: ", l2_err
+    print "(A, E12.6)", " Residual Norm: ", norm2(res)
+
+contains
+
+    subroutine print_debug()
+        integer :: j
+        print *, "--- Matrix Setup (Case", icase, ") ---"
+        do j = 1, n
+            print "(I3, ' |', 5F9.4, ' |', F9.4)", j, ab(j, :), b(j)
+        end do
+    end subroutine
+
+end program test_banded2
