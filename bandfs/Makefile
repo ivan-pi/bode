@@ -52,3 +52,4 @@ dist: clean
 clean:
 	$(RM) $(EXAMPLES)
 	$(RM) *.tar.gz
+	$(RM) -r *.dSYM
