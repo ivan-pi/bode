@@ -9,30 +9,24 @@ add_library(bode
 	src/bode_nonlin.f90
 	src/bode_solve.f90)
 
-add_executable(test_banded1 src/test_banded1.f90)
+add_executable(test_banded1 test/test_banded1.f90)
 target_link_libraries(test_banded1 bode)
 
-add_executable(test_banded2 src/test_banded2.f90)
+add_executable(test_banded2 test/test_banded2.f90)
 target_link_libraries(test_banded2 bode)
 
-add_executable(test src/test.F90)
-target_link_libraries(test bode)
-target_link_libraries(test lapack)
+add_executable(robertson examples/robertson.F90)
+target_link_libraries(robertson bode)
+target_link_libraries(robertson lapack)
 
-add_executable(test_old src/test.F90 src/bode.f)
-target_compile_definitions(test_old PRIVATE ORIG)
+add_executable(robertson_old examples/robertson.F90 src/bode.f)
+target_compile_definitions(robertson_old PRIVATE ORIG)
 
-add_executable(test_vdp src/test_van_der_pol.f90)
+add_executable(test_vdp examples/test_van_der_pol.f90)
 target_link_libraries(test_vdp bode)
 
-add_executable(test_vdp_old src/test_van_der_pol.f90 src/bode.f)
+add_executable(test_vdp_old examples/test_van_der_pol.f90 src/bode.f)
 
 # Banded procedures by Jeff Thorson
-add_library(band
-    src/band.f
-    src/solve.f)
+add_library(bandfs bandfs/bandf.f bandfs/bands.f bandfs/bndmv.f90 bandfs/bndsl.f90)
 
-# Adapted procedures
-add_library(bandfs
-    src/bandf.f
-    src/bands.f)
