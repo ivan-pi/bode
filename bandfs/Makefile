@@ -14,7 +14,7 @@ TARGETS = $(addprefix $(GEN_DIR)/, $(TARGET_NAMES))
 
 # Example Programs
 EXAMPLES = banded_example bandfs_demo bandfs_reaction_diffusion \
-		   bandfs_fem_1d
+		   bandfs_fem_1d bandfs_fem_1d_quadratic
 
 # --- Target-Specific Variables ---
 # This appends -llapack only when building banded_example
