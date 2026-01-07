@@ -11,14 +11,17 @@ add_library(bode
 	src/bode_solve.f90)
 
 # Banded Linear Algebra
-add_library(bandfs bandfs/bandf.f bandfs/bands.f bandfs/bndmv.f90 bandfs/bndsl.f90)
+add_library(bandfs
+    bandfs/bandf.f bandfs/bands.f bandfs/bndmv.f90 bandfs/bndsl.f90)
+target_include_directories(bandfs PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bandfs/include>
+)
 
 add_executable(test_banded1 test/test_banded1.f90)
 target_link_libraries(test_banded1 bode)
 
 add_executable(test_banded2 test/test_banded2.f90)
 target_link_libraries(test_banded2 bode bandfs)
-target_include_directories(test_banded2 PRIVATE bandfs/)
 
 add_executable(robertson examples/robertson.F90)
 target_link_libraries(robertson bode)
