@@ -60,6 +60,7 @@ program bandfs_fem_1d
   ! Node 1: Natural (Neumann) Boundary Condition (Symmetry)
   ! We "do nothing" here. The integration by parts naturally enforces du/dx = 0.
 
+  ! Node n: Fixed Concentration - Dirichlet Boundary Condition.
   ! Set the n-th row to represent u_n = 1.0
   a(n, :-1)  = 0.0_wp  ! Zero the lower diagonal entry
   a(n,  0)  = 1.0_wp  ! Identity on main diagonal
