@@ -72,8 +72,8 @@ program bandfs_fem_1d
   call bands(n, m, a, lda, ipiv, b, info)
 
   ! 6. Results - Using implied-DO loop and format repetition
-  write(*,'("# n=", I0, " phi=", F8.3)') n, phi
-  write(*,'("#", A9, A15)') "x", "u(x)"
-  write(*,'(F10.4, F15.6)') ((i-1)*dx, b(i), i = 1, n)
+  write(*,'("# n=", I0, ", phi=", F8.3)') n, phi
+  write(*,'("#", A9, A12)') "x", "u(x)"
+  write(*,'(F10.4, F12.6)') ((i-1)*dx, b(i), i = 1, n)
 
 end program bandfs_fem_1d

@@ -66,6 +66,7 @@ program bandfs_reaction_diffusion
     ! 6. Output Results
     ! Uses an implied-DO list to print all pairs. 
     ! The last format repeats for each pair until the data is exhausted.
+    write(*,'("# n=", I0, ", phi=", F8.3)') n, phi
     write(*,'("#", A9, A12)') "x", "u(x)"
     write(*,'(F10.4, F12.6)') ((i-1)*dx, b(i), i=1,n)
 
