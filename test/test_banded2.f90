@@ -111,8 +111,33 @@ contains
 
     ! Reaction-Diffusion Example 3
     ! Uses backward difference (second order) for the Neumann BC
-    subroutine setup3
-        error stop "setup3: Not Implemented"
+    subroutine setup3(n, ab, b)
+        integer, intent(in) :: n
+        real(wp), intent(out) :: ab(n,-2:2)
+        real(wp), intent(out) :: b(n)
+
+        real(wp) :: h, diff, reac
+
+        b = 0.0_wp
+        b(1) = 1.0_wp ! Dirichlet boundary condition
+
+        ! stepsize, diffusivity and reaction coefficient
+        h = 1.0_wp/real(n-1,wp)
+        diff = 1.0_wp
+        reac = 1.0_wp
+
+        ! Fill tridiagonal parts for all internal nodes
+        ab(:, -1) = diff
+        ab(:,  0) = -2.0_wp * diff - h**2 * reac
+        ab(:,  1) = diff
+
+        ! Row 1: Dirichlet
+        ab(1, 0) = 1.0_wp
+        b(1)     = 1.0_wp
+
+        ! Row n: 2nd-order Backward Neumann
+        ab(n, -2:0) = [1.0_wp, -4.0_wp, 3.0_wp] / 2.0_wp
+
     end subroutine
 
     ! Analytical solution
@@ -127,23 +152,41 @@ end module
 program test_banded2
 
 use bode_mod, only: wp
-use diff_mod, only: setup1, setup2, solve_banded, sol
+use diff_mod, only: setup1, setup2, setup3, solve_banded, sol
 
 implicit none
 
-integer, parameter :: kl = 1, ku = 1
-integer, parameter :: n = 11
+integer :: n = 10
 
-integer, parameter :: bw = kl + ku + 1
+real(wp), allocatable :: ab(:,:), b(:), x(:), c(:)
+integer, allocatable :: ipiv(:)
 
-real(wp) :: ab(n, 5), b(n), h, x(n), c(n)
-integer :: ipiv(n), info, k, i
-
-! Half-bandwidth
-k = 1
+real(wp) :: h
+integer :: kh, lda, info, i, icase
 
 ! Setup reaction-diffusion equation
-call setup2(n, ab, b)
+!call setup2(n, ab, b)
+
+icase = 3
+lda = n
+allocate(b(n), x(n), c(n), ipiv(n))
+
+select case(icase)
+case(1)
+    kh = 1
+    allocate(ab(lda,-kh:kh))
+    call setup1(n, ab, b)
+case(2)
+    kh = 1
+    allocate(ab(lda,-kh:kh))
+    call setup2(n, ab, b)
+case(3)
+    kh = 2
+    allocate(ab(lda,-kh:kh))
+    call setup3(n, ab, b)
+case default
+    error stop "Invalid case"
+end select
 
 print *, "ab = "
 do i = 1, n
@@ -151,7 +194,7 @@ do i = 1, n
 end do
 
 ! General banded matrix driver
-call solve_banded(n,k,ab,lda=n,ipiv=ipiv,b=b,ifail=info)
+call solve_banded(n,kh,ab,lda,ipiv,b,info)
 print *, "# factor and solve info = ", info
 
 do i = 1, n
