@@ -23,6 +23,7 @@ sub-folder.
   - [bands](./README.md#bands)
   - [bndmv](./README.md#bndmv)
   - [bndsl](./README.md#bndsl)
+* [Mapping to standard libraries](./README.md#mapping-to-standard-libraries)
 * [Historical Note](./README.md#historical-note)
 
 # Usage
@@ -236,6 +237,22 @@ Arguments:
 
 Available as generic `bndsl` or specific names `sbndsl`/`dbndsl`.
 
+# Mapping to standard libraries
+
+This project specifically targets structurally symmetric banded matrices.
+If a different number of sub-diagonals (`kl`) and super-diagonals (`ku`) is needed,
+consider using [LAPACK](https://www.netlib.org/lapack/) instead.
+
+
+| Purpose               | This project | SLATEC | LINPACK      | BLAS/LAPACK  |
+|------------------------------|-------|--------|--------------|--------------|
+| Matrix-vector multiply       | bndmv | /      | /            | xGBMV (BLAS) |
+| LU Factorization             | bandf | xNBFA  | xGBFA        | xGBTRF       |
+| Solve (back-substitution)    | bands | xNBSL  | xGBSL        | xGBTRS       |
+| Factor and solve (driver).   | bndsl | xNBFS  | /            | xGBSV        |
+
+Note: This package only provides the `s` (single) and `d` (double) real precision variants.
+SLATEC, LINPACK, and LAPACK support the full set of real (`s`,`d`) and complex types (`c`,`z`).
 
 # Historical Note
 
