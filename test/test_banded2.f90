@@ -38,6 +38,8 @@ contains
 
     end subroutine
 
+    ! Reaction-Diffusion Example 1
+    ! Uses backward difference (first order) for the Neumann BC
     subroutine setup1(n, ab, b)
         integer, intent(in) :: n
         real(wp), intent(out) :: ab(n,3)
@@ -72,6 +74,8 @@ contains
 
     end subroutine
 
+    ! Reaction-Diffusion Example 2
+    ! Uses central difference (via ghost node) for the Neumann BC
     subroutine setup2(n, ab, b)
         integer, intent(in) :: n
         real(wp), intent(out) :: ab(n,3)
@@ -105,6 +109,13 @@ contains
 
     end subroutine
 
+    ! Reaction-Diffusion Example 3
+    ! Uses backward difference (second order) for the Neumann BC
+    subroutine setup3
+        error stop "setup3: Not Implemented"
+    end subroutine
+
+    ! Analytical solution
     elemental function sol(x,Th) result(c)
         real(wp), intent(in) :: x, Th
         real(wp) :: c
