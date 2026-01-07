@@ -212,6 +212,8 @@ Available as generic `bands` or specific names `sbndmv`/`dbndmv`.
 
 ## `bndsl()`
 
+Compute the solution to the system of linear equations `A * X = B` for structurally symmetric banded matrices.
+
 ```fortran
 subroutine bndsl(n,k,nrhs,a,lda,ipiv,b,ldb,info)
   integer, intent(in) :: n, k, nrhs, lda, ldb
