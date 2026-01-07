@@ -1,5 +1,5 @@
 #:for c, lit in zip(['s','d'],["1.0e0","1.0d0"])
-! ${c}$bndslv computes the solution to the system of linear equations
+! ${c}$bndsl computes the solution to the system of linear equations
 !   A*X = B for structurally symmetric banded matrices (simple driver)
 subroutine ${c}$bndsl(n,k,nrhs,a,lda,ipiv,b,ldb,info)
 implicit none

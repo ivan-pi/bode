@@ -1,4 +1,4 @@
-! sbndslv computes the solution to the system of linear equations
+! sbndsl computes the solution to the system of linear equations
 !   A*X = B for structurally symmetric banded matrices (simple driver)
 subroutine sbndsl(n,k,nrhs,a,lda,ipiv,b,ldb,info)
 implicit none
@@ -41,7 +41,7 @@ end if
 
 end subroutine
 !
-! dbndslv computes the solution to the system of linear equations
+! dbndsl computes the solution to the system of linear equations
 !   A*X = B for structurally symmetric banded matrices (simple driver)
 subroutine dbndsl(n,k,nrhs,a,lda,ipiv,b,ldb,info)
 implicit none
