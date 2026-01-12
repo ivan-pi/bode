@@ -10,19 +10,10 @@ The method used appeared originally in
 
 > Prothero, A., & Robinson, A. (1974). On the stability and accuracy of one-step methods for solving stiff systems of ordinary differential equations. Mathematics of Computation, 28(125), 145-162. https://doi.org/10.1090/S0025-5718-1974-0331793-2, [PDF](https://www.ams.org/journals/mcom/1974-28-125/S0025-5718-1974-0331793-2/S0025-5718-1974-0331793-2.pdf)
 
----
+## Other ODE Software
 
-Hamming Predictor Corrector Method:
-- https://dl.acm.org/doi/10.1145/320954.320958
-- https://dl.acm.org/doi/pdf/10.1145/321138.321143
-- http://www.ccpo.odu.edu/~klinck/Reprints/PDF/hammingJACM1959.pdf
-- https://www.tat.physik.uni-tuebingen.de/~kokkotas/Teaching/Num_Methods_files/Comp_Phys6-md.pdf
-- https://www.cfm.brown.edu/people/dobrush/am33/Mathematica/hamming.html
-- https://www.ams.org/journals/mcom/1973-27-121/S0025-5718-1973-0331803-1/
-- https://www.ams.org/journals/mcom/1970-24-109/S0025-5718-1970-0280010-7/S0025-5718-1970-0280010-7.pdf
-- https://www.proquest.com/openview/c11b30c59ce7000a0759ac2b81a48171/1?pq-origsite=gscholar&cbl=18750&diss=y
-- https://ir.library.oregonstate.edu/concern/graduate_thesis_or_dissertations/3j333584h
-
-See also:
-- https://github.com/ivan-pi/stiff3
-- http://www.unige.ch/~hairer/software.html
+- [STIFF3 ODE Solver](https://github.com/ivan-pi/stiff3)
+- [Fortran and Matlab Codes by Ernst Hairer](http://www.unige.ch/~hairer/software.html)
+- [ODEPACK (Legacy)](https://computing.llnl.gov/projects/odepack)
+- [ode (Netlib)](https://www.netlib.org/ode/)
+- [FATODE](https://people.cs.vt.edu/~asandu/Software/FATODE/index.html)
