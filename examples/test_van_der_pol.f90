@@ -53,7 +53,7 @@ subroutine pjacb(x,y,n,jac,ld,m1,h)
    use vdp_mod, only: mu, alpha
    integer, intent(in) :: n
    real(wp), intent(in) :: y(n), x
-   real(wp), intent(inout) :: jac(ld,2*m1+1)
+   real(wp), intent(inout) :: jac(ld,*)
    real(wp), intent(in) :: h
 
    real(wp) :: j(2,2), hh
@@ -66,19 +66,10 @@ subroutine pjacb(x,y,n,jac,ld,m1,h)
    j(2,2) = mu*(1.0_wp - y(1)**2)
 
 
-   jac(1:n,:) = 0
-   !
-   ! We must evaluate B + h J
-   !
-
-   ! J21
+   jac(1:n,1:n) = 0.0_wp
+   jac(1,1) = 1.0_wp + hh*j(1,1)
+   jac(1,2) = hh*j(1,2)
    jac(2,1) = hh*j(2,1)
-
-   ! J12
-   jac(1,3) = hh*j(1,2)
-
-   ! Diagonal
-   jac(1,2) = 1.0_wp + hh*j(1,1)
    jac(2,2) = 1.0_wp + hh*j(2,2)
 
 end subroutine
@@ -95,7 +86,7 @@ program test
 
    real(wp) :: t, tout, emax, xstep
    integer :: imn, m1, ifail
-   integer :: info(2)
+   integer :: info(3)
 
    ymin = 1.0e-6_wp
    emax = 1.0e-6_wp
@@ -106,6 +97,7 @@ program test
 
    info(1) = m1
    info(2) = 1   ! FD (0) or user-provided Jacobian (1)
+   info(3) = 0   ! Dense Jacobian path
 
    ! Initial condition
    t = 0

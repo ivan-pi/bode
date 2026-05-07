@@ -1,2 +1,0 @@
-/usr/bin/ar qc libbode.a CMakeFiles/bode.dir/src/bode_module.F90.o CMakeFiles/bode.dir/src/bode_nonlin.f90.o CMakeFiles/bode.dir/src/bode_solve.f90.o
-/usr/bin/ranlib libbode.a

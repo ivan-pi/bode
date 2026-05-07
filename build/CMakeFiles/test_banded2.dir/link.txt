@@ -1,1 +1,0 @@
-/usr/bin/f95 -Wl,--dependency-file=CMakeFiles/test_banded2.dir/link.d CMakeFiles/test_banded2.dir/test/test_banded2.f90.o -o test_banded2  libbode.a libbandfs.a
