@@ -1,0 +1,10 @@
+/home/runner/work/bode/bode/build/CMakeFiles/bode.dir
+/home/runner/work/bode/bode/build/CMakeFiles/bandfs.dir
+/home/runner/work/bode/bode/build/CMakeFiles/test_banded1.dir
+/home/runner/work/bode/bode/build/CMakeFiles/test_banded2.dir
+/home/runner/work/bode/bode/build/CMakeFiles/robertson.dir
+/home/runner/work/bode/bode/build/CMakeFiles/robertson_old.dir
+/home/runner/work/bode/bode/build/CMakeFiles/test_vdp.dir
+/home/runner/work/bode/bode/build/CMakeFiles/test_vdp_old.dir
+/home/runner/work/bode/bode/build/CMakeFiles/edit_cache.dir
+/home/runner/work/bode/bode/build/CMakeFiles/rebuild_cache.dir

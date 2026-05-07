@@ -1,0 +1,1 @@
+/usr/bin/f95 -Wl,--dependency-file=CMakeFiles/robertson.dir/link.d CMakeFiles/robertson.dir/examples/robertson.F90.o -o robertson  libbode.a -llapack

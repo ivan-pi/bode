@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbandfs.a CMakeFiles/bandfs.dir/bandfs/bandf.f.o CMakeFiles/bandfs.dir/bandfs/bands.f.o CMakeFiles/bandfs.dir/bandfs/bndmv.f90.o CMakeFiles/bandfs.dir/bandfs/bndsl.f90.o
+/usr/bin/ranlib libbandfs.a
