@@ -86,10 +86,10 @@ contains
         ab(n, -2:0) = [1.0_wp, -4.0_wp, 3.0_wp]
     end subroutine
 
-    elemental function sol(x,Th) result(c)
-        real(wp), intent(in) :: x, Th
+    elemental function sol(x,theta) result(c)
+        real(wp), intent(in) :: x, theta
         real(wp) :: c
-        c = cosh((1.0_wp - x)*Th)/cosh(Th)
+        c = cosh((1.0_wp - x)*theta)/cosh(theta)
     end function
 
 end module
@@ -160,7 +160,7 @@ contains
 
         h = 1.0_wp / real(n-1, wp)
         x = [((i-1)*h, i=1, n)]
-        c = sol(x, Th=1.0_wp)
+        c = sol(x, theta=1.0_wp)
 
         l2_err = norm2(b - c)
         res_norm = norm2(res)
@@ -188,6 +188,10 @@ contains
         if (ios /= 0) error stop "Could not open reference file"
 
         read(unit,'(A)',iostat=ios) line
+        if (ios /= 0) then
+            close(unit)
+            error stop "Invalid reference header"
+        end if
         do
             read(unit,*,iostat=ios) line_case, line_n, l2, res
             if (ios /= 0) exit
@@ -205,7 +209,7 @@ contains
         end if
     end subroutine
 
-    pure function itoa(i) result(s)
+    function itoa(i) result(s)
         integer, intent(in) :: i
         character(len=16) :: s
         write(s,'(I0)') i

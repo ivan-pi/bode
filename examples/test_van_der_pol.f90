@@ -53,7 +53,7 @@ subroutine pjacb(x,y,n,jac,ld,m1,h)
    use vdp_mod, only: mu, alpha
    integer, intent(in) :: n
    real(wp), intent(in) :: y(n), x
-   real(wp), intent(inout) :: jac(ld,*)
+   real(wp), intent(inout) :: jac(ld,n)
    real(wp), intent(in) :: h
 
    real(wp) :: j(2,2), hh
