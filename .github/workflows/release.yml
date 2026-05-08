@@ -1,0 +1,32 @@
+name: Release Source Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran cmake ninja-build liblapack-dev libblas-dev
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DBUILD_TESTING=OFF -DBODE_BUILD_EXAMPLES=OFF
+
+      - name: Build source package
+        run: cmake --build build --target package_source
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-package
+          path: build/*.tar.gz
